@@ -4,8 +4,20 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+"beda795" = {path = "./chainerrl"}
+gym = "*"
+"autopep8" = "*"
+hacking = "*"
+pytest = "*"
+mock = "*"
 
 [dev-packages]
+pylint = "*"
 
 [requires]
 python_version = "3.6"
+
+[scripts]
+cputest = 'pytest -m "not gpu"'
+gputest = "pytest"
+impala = "python chainerrl/examples/gym/train_impala_gym.py 1"
