@@ -20,4 +20,4 @@ python_version = "3.6"
 [scripts]
 cputest = 'pytest -m "not gpu"'
 gputest = "pytest"
-impala = "python chainerrl/examples/gym/train_impala_gym.py 1"
+impala = "python chainerrl/examples/gym/train_impala_gym.py 3"
