@@ -4,8 +4,21 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+cached-property = "*"
+chainer = ">=2.0.0"
+fastcache = "*"
+funcsigs = "*"
+future = "*"
+gym = ">=0.7.3"
+numpy = ">=1.10.4"
+scipy = "*"
+statistics = "*"
+Pillow = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.6"
+
+[scripts]
+spiral = "python chainerrl/examples/spiral/train_simple.py"

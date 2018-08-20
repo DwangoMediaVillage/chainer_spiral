@@ -1,4 +1,7 @@
 
+# ignore results direcotrey created by chainerRL
+results/
+
 # Created by https://www.gitignore.io/api/vim,macos,emacs,python,visualstudiocode
 
 ### Emacs ###
@@ -216,10 +219,10 @@ tags
 
 ### VisualStudioCode ###
 .vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
 
 
 # End of https://www.gitignore.io/api/vim,macos,emacs,python,visualstudiocode
