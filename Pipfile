@@ -14,11 +14,21 @@ numpy = ">=1.10.4"
 scipy = "*"
 statistics = "*"
 Pillow = "*"
+pygobject = "*"
+pyobjc = "*"
+pycairo = "*"
+nose = "*"
+matplotlib = "*"
 
 [dev-packages]
+ipython = "*"
+ipdb = "*"
+pillow = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
 
 [scripts]
 spiral = "python chainerrl/examples/spiral/train_simple.py"
+test = "nosetests dev_tests"
+env = "python chainerrl/examples/spiral/mypaint_env.py"
