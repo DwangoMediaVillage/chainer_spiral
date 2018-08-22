@@ -19,6 +19,7 @@ pyobjc = "*"
 pycairo = "*"
 nose = "*"
 matplotlib = "*"
+chainerrl = "*"
 
 [dev-packages]
 ipython = "*"
@@ -29,7 +30,7 @@ pillow = "*"
 python_version = "3.7"
 
 [scripts]
-spiral = "python chainerrl/examples/spiral/train_simple.py"
-test = "nosetests dev_tests"
-env = "python chainerrl/examples/spiral/mypaint_env.py"
-random = "python dev_tests/random_drawing.py"
+test = "nosetests tests"
+random = "python random_drawing.py"
+train = "python train_simple.py"
+env = "python env/mypaint_env.py"
