@@ -4,20 +4,32 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-"beda795" = {path = "./chainerrl"}
-gym = "*"
-"autopep8" = "*"
-hacking = "*"
-pytest = "*"
-mock = "*"
+cached-property = "*"
+chainer = ">=2.0.0"
+fastcache = "*"
+funcsigs = "*"
+future = "*"
+gym = ">=0.7.3"
+numpy = ">=1.10.4"
+scipy = "*"
+statistics = "*"
+Pillow = "*"
+pygobject = "*"
+pyobjc = "*"
+pycairo = "*"
+nose = "*"
+matplotlib = "*"
 
 [dev-packages]
-pylint = "*"
+ipython = "*"
+ipdb = "*"
+pillow = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
 
 [scripts]
-cputest = 'pytest -m "not gpu"'
-gputest = "pytest"
-impala = "python chainerrl/examples/gym/train_impala_gym.py 3"
+spiral = "python chainerrl/examples/spiral/train_simple.py"
+test = "nosetests dev_tests"
+env = "python chainerrl/examples/spiral/mypaint_env.py"
+random = "python dev_tests/random_drawing.py"
