@@ -11,3 +11,10 @@ def test_import_gym():
 def test_import_chainerrl():
     # try to import chainerrl
     import chainerrl
+
+def test_import_spiral():
+    # try to import spiral env
+    from env import MyPaintEnv
+
+    # try to import spiral agent
+    from agents.spiral import SPIRALModel, SPIRAL
