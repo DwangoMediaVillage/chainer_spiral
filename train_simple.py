@@ -33,6 +33,7 @@ from chainerrl import v_function
 
 from env import MyPaintEnv
 from agents import spiral
+from spiral_evaluator import show_drawn_pictures
 
 import chainer.distributions as D
 
@@ -238,6 +239,8 @@ def main():
     parser.add_argument('--steps', type=int, default=20)
     parser.add_argument('--eval-interval', type=int, default=10)
     parser.add_argument('--eval-n-runs', type=int, default=1)
+    parser.add_argument('--load', type=str, default='')
+    parser.add_argument('--demo', action='store_true', default=False)
     args = parser.parse_args()
 
     # init a logger
@@ -312,22 +315,27 @@ def main():
 
     agent = spiral.SPIRAL(gen, dis, gen_opt, dis_opt, target_data_sampler, in_channel)
 
-    # TODO: load a pre-trained weight
+    if args.load:
+        agent.load(args.load)
 
-    # TODO: implement demo mode
+    if args.demo:
+        # IN PROGRESS
+        env = make_env(0, True)
+        show_drawn_pictures(env, agent, timestep_limit)
 
-    # train
-    # single core for debug
-    # TODO: change to train_async
-    experiments.train_agent_with_evaluation(
-        agent=agent,
-        env=make_env(0, False),
-        steps=args.steps,
-        eval_n_runs=args.eval_n_runs,
-        eval_interval=args.eval_interval,
-        max_episode_len=timestep_limit,
-        outdir=args.outdir
-        )
+    else:
+        # train
+        # single core for debug
+        # TODO: change to train_async
+        experiments.train_agent_with_evaluation(
+            agent=agent,
+            env=make_env(0, False),
+            steps=args.steps,
+            eval_n_runs=args.eval_n_runs,
+            eval_interval=args.eval_interval,
+            max_episode_len=timestep_limit,
+            outdir=args.outdir
+            )
 
 if __name__ == '__main__':
     main()

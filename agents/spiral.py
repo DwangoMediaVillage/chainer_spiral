@@ -40,7 +40,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     See https://arxiv.org/abs/1804.01118
 
     """
-    saved_attributes = []  # TODO: add model and optimizer
+    saved_attributes = ['generator', 'discriminator', 'gen_optimizer', 'dis_optimizer']
 
     def __init__(self, generator, discriminator,
                  gen_optimizer, dis_optimizer,
@@ -48,7 +48,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  in_channel,
                  act_deterministically=False,
                  gamma=0.9,
-                 beta=1e-2):
+                 beta=1e-2,
+                 average_entropy_decay=0.999,
+                 average_value_decay=0.999):
         self.generator = generator
         self.discriminator = discriminator
         self.gen_optimizer = gen_optimizer
@@ -60,12 +62,20 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.gamma = 0.9
         self.beta = beta
 
+        self.average_value_decay = average_value_decay
+        self.average_entropy_decay = average_entropy_decay
+
         self.t = 0  # time step counter
 
         # buffers to store hist during episodes
         self.past_action_log_prob = {}
         self.past_action_entropy = {}
         self.past_values = {}
+
+        # buffers for get_statistics
+        self.stat_l2_loss = None
+        self.stat_average_value = 0
+        self.stat_average_entropy = 0
 
     def __process_obs(self, obs):
         c = obs['image']
@@ -111,12 +121,18 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         x, q = [ p.sample().data[0] for p in pout ]
         
         # store to the buffers
-        self.past_action_entropy[self.t] = [ F.sum(p.entropy) for p in pout ]
-        self.past_action_log_prob[self.t] = [ p.log_prob(a) for p, a in zip(pout, (x, q)) ]
+        self.past_action_entropy[self.t] = sum([ F.sum(p.entropy) for p in pout ])
+        self.past_action_log_prob[self.t] = sum([ p.log_prob(a) for p, a in zip(pout, (x, q)) ])
         self.past_values[self.t] = vout
 
-        # TODO: update stats (average value and entropy )
-
+        # update stats (average value and entropy )
+        
+        self.stat_average_value += (
+            (1 - self.average_value_decay) * 
+            (float(self.past_values[self.t].data[0]) - self.stat_average_value))
+        self.stat_average_entropy += (
+            (1 - self.average_entropy_decay) *
+            (float(self.past_action_entropy[self.t].data) - self.stat_average_entropy))
         action = self.__pack_action(x, q)
         self.t += 1
         return action
@@ -124,10 +140,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     def stop_episode_and_train(self, obs, r, done=None):
         state = self.__process_obs(obs)
         c, _, _ = state
-        self.__update(state, self.discriminator(c))
+        self.__update(c, self.discriminator(c))
         self.generator.reset_state()
 
-    def __update(self, state, dis_out):
+    def __update(self, c, dis_out):
         """ update generator and discriminator at the end of drawing """
         R = np.asscalar(dis_out.data)
 
@@ -141,8 +157,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             advantage = R - v
             
             # Accumulate gradients of policy
-            log_prob = sum(self.past_action_log_prob[t])
-            entropy = sum(self.past_action_entropy[t])
+            log_prob = self.past_action_log_prob[t]
+            entropy = self.past_action_entropy[t]
 
             pi_loss -= log_prob * float(advantage.data)
             pi_loss -= self.beta * entropy
@@ -160,8 +176,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # TODO: copy local grad to the global model
         self.gen_optimizer.update()
 
-        self.gen_optimizer.update()
-
         self.past_action_log_prob = {}
         self.past_action_entropy = {}
         self.past_values = {}
@@ -170,9 +184,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # sample y from the target images
         y = self.target_data_sampler()
-        loss_dis = F.sum(F.softplus(dis_out)) + F.sum(F.softplus(-self.discriminator(y)))
 
         # TODO: add spectrum normalization
+        loss_dis = F.sum(F.softplus(dis_out)) + F.sum(F.softplus(-self.discriminator(y)))
+
+        # evaluate L2 loss between drawn picture and y
+        self.stat_l2_loss = float(F.mean_squared_error(c, y).data)
 
         self.discriminator.zerograds()
         loss_dis.backward()
@@ -182,8 +199,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.t = 0
 
     def get_statistics(self):
-        # TODO: implement here
-        return []
+        return [
+            ('average_value', self.stat_average_value),
+            ('average_entropy', self.stat_average_entropy),
+            ('l2_loss', self.stat_l2_loss)
+        ]
 
     def stop_episode(self):
         """ spiral model is a recurrent model """
@@ -200,8 +220,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             
             return self.__pack_action(x, q)
 
-    def load(self):
-        # TODO: implement here
-        pass
+    def load(self, dirname):
+        logger.debug('Load parameters from %s', dirname)
+        super().load(dirname)
 
     
