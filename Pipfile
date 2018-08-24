@@ -20,6 +20,7 @@ pycairo = "*"
 nose = "*"
 matplotlib = "*"
 chainerrl = "*"
+opencv-python = "*"
 
 [dev-packages]
 ipython = "*"
