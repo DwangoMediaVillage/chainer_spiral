@@ -31,7 +31,7 @@ from chainerrl import policies
 from chainerrl.recurrent import RecurrentChainMixin
 from chainerrl import v_function
 
-from env import MyPaintEnv
+from enviroments import MyPaintEnv
 from agents import spiral
 from spiral_evaluator import show_drawn_pictures
 

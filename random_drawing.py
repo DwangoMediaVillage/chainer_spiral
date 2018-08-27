@@ -1,4 +1,4 @@
-from env import MyPaintEnv
+from enviroments import MyPaintEnv
 import numpy as np
 from gym import wrappers
 

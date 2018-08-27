@@ -1,0 +1,1 @@
+from .mypaint_env import MyPaintEnv
