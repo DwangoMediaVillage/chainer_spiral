@@ -102,7 +102,17 @@ def main():
         dis_opt.add_hook(NonbiasWeightDecay(args.weight_decay))
 
     # target image dataset
-    train, test = chainer.datasets.get_mnist(withlabel=False)
+    def simple_class_filter(xs, simple_class=False, target_label=3):
+        if not simple_class:
+            # return only data
+            return [ x[0] for x in xs ]
+        
+        # filtering by label
+        indices = [ i for i, x in enumerate(xs) if x[1] == target_label ]
+        return [ xs[i][0] for i in indices ]
+
+    train, _ = chainer.datasets.get_mnist(withlabel=True)
+    train = simple_class_filter(train, simple_class=True)
     train_iter = chainer.iterators.SerialIterator(train, 1)  # batchsize is 1
 
     def target_data_sampler():
