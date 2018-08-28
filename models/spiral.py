@@ -34,6 +34,18 @@ def gumbel_softmax_sampling(pi, t=1.0):
     return z
 
 
+def bw_linear(x_in, x, l):
+    return F.matmul(x, l.W)
+
+
+def bw_convolution(x_in, x, l):
+    return F.deconvolution_2d(x, l.W, None, l.stride, l.pad, (x_in.data.shape[2], x_in.data.shape[3]))
+
+
+def bw_leaky_relu(x_in, x, a):
+    return (x_in.data > 0) * x + a * (x_in.data < 0) * x
+
+
 class SpiralPi(chainer.Chain):
     """ CNN-LSTM with Autoregressive decodoer. """
     def __init__(self, obs_spaces, action_spaces, in_channel=3):
@@ -170,23 +182,35 @@ class SpiralDiscriminator(chainer.Chain):
             self.c4 = L.Convolution2D(52, 64, stride=2, ksize=3, pad=1)
             self.c5 = L.Convolution2D(64, 64, stride=1, ksize=3, pad=1)
             self.c6 = L.Convolution2D(64, 128, stride=2, ksize=3, pad=1)
-            self.b2 = L.BatchNormalization(48, use_gamma=False)
-            self.b3 = L.BatchNormalization(52, use_gamma=False)
-            self.b4 = L.BatchNormalization(64, use_gamma=False)
-            self.b5 = L.BatchNormalization(64, use_gamma=False)
-            self.b6 = L.BatchNormalization(128, use_gamma=False)
             self.l7 = L.Linear(8 * 8 * 128, 1)
         
     def __call__(self, x):
-        h = x
-        h = F.leaky_relu(self.c1(h))
-        h = F.leaky_relu(self.b2(self.c2(h)))
-        h = F.leaky_relu(self.b3(self.c3(h)))
-        h = F.leaky_relu(self.b4(self.c4(h)))
-        h = F.leaky_relu(self.b5(self.c5(h)))
-        h = F.leaky_relu(self.b6(self.c6(h)))
-        return self.l7(h)
+        self.x = x
+        self.h1 = F.leaky_relu(self.c1(self.x))
+        self.h2 = F.leaky_relu(self.c2(self.h1))
+        self.h3 = F.leaky_relu(self.c3(self.h2))
+        self.h4 = F.leaky_relu(self.c4(self.h3))
+        self.h5 = F.leaky_relu(self.c5(self.h4))
+        self.h6 = F.leaky_relu(self.c6(self.h5))
+        return self.l7(self.h6)
                 
+    def differentiable_backward(self, x):
+        g = bw_linear(self.h6, x, self.l7)
+        g = F.reshape(g, (x.shape[0], 128, 8, 8))
+        g = bw_leaky_relu(self.h6, g, 0.2)
+        g = bw_convolution(self.h5, g, self.c6)
+        g = bw_leaky_relu(self.h5, g, 0.2)
+        g = bw_convolution(self.h4, g, self.c5)
+        g = bw_leaky_relu(self.h4, g, 0.2)
+        g = bw_convolution(self.h3, g, self.c4)
+        g = bw_leaky_relu(self.h3, g, 0.2)
+        g = bw_convolution(self.h2, g, self.c3)
+        g = bw_leaky_relu(self.h2, g, 0.2)
+        g = bw_convolution(self.h1, g, self.c2)
+        g = bw_leaky_relu(self.h1, g, 0.2)
+        g = bw_convolution(self.x, g, self.c1)
+        return g
+
 
 class SPIRALSimpleModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixin):
     """ A simple model """
