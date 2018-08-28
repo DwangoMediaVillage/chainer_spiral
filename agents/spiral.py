@@ -44,7 +44,7 @@ class SpiralStepHook(StepHook):
         self.timestep_limit = timestep_limit
     
     def __call__(self, env, agent, step):
-        if step % self.timestep_limit == 0:
+        if agent.t % self.timestep_limit == 0:
             agent.compute_reward(env.render(mode='rgb_array'))
 
 
