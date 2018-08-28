@@ -18,3 +18,6 @@ def test_import_spiral():
 
     # try to import spiral agent
     from agents.spiral import SPIRALModel, SPIRAL
+
+    # try to import spiral models
+    from models.spiral import SPIRALSimpleModel, SpiralDiscriminator

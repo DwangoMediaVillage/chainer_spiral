@@ -13,213 +13,24 @@ import os
 # This prevents numpy from using multiple threads
 os.environ['OMP_NUM_THREADS'] = '1'  # NOQA
 
+import numpy as np
 import chainer
-from chainer import functions as F
-from chainer import links as L
+import cv2
+
 import gym
 gym.undo_logger_setup()  # NOQA
 import gym.wrappers
-import numpy as np
 
-# from chainerrl.agents import a3c
 from chainerrl import experiments
-from chainerrl import links
 from chainerrl import misc
 from chainerrl.optimizers.nonbias_weight_decay import NonbiasWeightDecay
 from chainerrl.optimizers import rmsprop_async
-from chainerrl import policies
-from chainerrl.recurrent import RecurrentChainMixin
-from chainerrl import v_function
 
 from enviroments import MyPaintEnv
 from agents import spiral
 from spiral_evaluator import show_drawn_pictures
+from models.spiral import SpiralDiscriminator, SPIRALSimpleModel
 
-import chainer.distributions as D
-
-import cv2
-
-
-def gumbel_softmax_sampling(pi, t=1.0):
-    """ performs Gumbel Softmax Sampling for pi """
-    p_shape = pi.p.shape
-
-    # sample from uniform dist.
-    low = np.array(0, dtype=np.float32)
-    high = np.array(1, dtype=np.float32)
-    u = D.Uniform(low=low, high=high).sample(sample_shape=p_shape)
-    g = -F.log(-F.log(u))
-
-    z = F.softmax((pi.log_p + g) / t)
-    return z
-
-class SpiralPi(chainer.Chain):
-    """ CNN-LSTM with Autoregressive decodoer. """
-    def __init__(self, obs_spaces, action_spaces, in_channel=3):
-        self.in_channel = in_channel
-        self.obs_pos_dim = obs_spaces.spaces['position'].n
-        self.obs_q_dim = obs_spaces.spaces['prob'].n
-        self.act_pos_dim = action_spaces.spaces['position'].n
-        self.act_q_dim = action_spaces.spaces['prob'].n
-
-        super().__init__()
-        with self.init_scope():
-            self.conv1 = L.Convolution2D(self.in_channel, 32, ksize=5)
-            self.linear_a1 = L.Linear(1, out_size=16)
-            self.linear_a2 = L.Linear(1, out_size=16)
-            self.conv2 = L.Convolution2D(32, 32, stride=2, ksize=4)
-            self.conv3 = L.Convolution2D(32, 32, stride=2, ksize=4)
-            self.conv4 = L.Convolution2D(32, 32, stride=2, ksize=4)
-
-            self.linear_2 = L.Linear(800, 256)
-            self.lstm = L.LSTM(256, 256)
-
-            self.z1_conv1 = L.Deconvolution2D(16, 8, stride=2, ksize=4, pad=1)
-            self.z1_conv2 = L.Deconvolution2D(8, 4, stride=2, ksize=4, pad=1)
-            self.z1_conv3 = L.Deconvolution2D(4, 1, stride=2, ksize=4, pad=1)
-            self.z1_linear1 = L.Linear(self.act_pos_dim, out_size=16)
-            self.z1_linear2 = L.Linear(256+16, out_size=256)
-            self.z2_linear = L.Linear(256, self.act_q_dim)
-
-
-    def __call__(self, obs):
-        """ forward single step. return actions aas categorical distributions. """
-        # image and action at the last step
-        # a has position (a1) and prob (a2)
-        c, a1, a2 = obs
-        
-        h_a1 = F.relu(self.linear_a1(a1))
-        h_a2 = F.relu(self.linear_a2(a2))
-        h_a = F.concat((h_a1, h_a2), axis=1)
-        h = F.relu(self.conv1(c))
-
-        # repeat h_a and adds to feature from the conv
-        imshape = h.shape[2:]
-        h = h + F.reshape(F.tile(h_a, imshape), (1, 32) + imshape)
-        
-        h = F.relu(self.conv2(h))
-        h = F.relu(self.conv3(h))
-        h = F.relu(self.conv4(h))
-
-        # TODO: insert ResBlock 3x3
-        h = F.expand_dims(F.flatten(h), 0)
-        h = F.relu(self.linear_2(h))
-
-        h = self.lstm(h)
-
-        # autoregressive part
-        z1 = h
-
-        # location
-        h_z1 = F.reshape(z1, (1, 16, 4, 4))
-        h_z1 = F.relu(self.z1_conv1(h_z1))
-        h_z1 = F.relu(self.z1_conv2(h_z1))
-        h_z1 = F.relu(self.z1_conv3(h_z1))
-        h_z1 = F.reshape(h_z1, (1, self.act_pos_dim))
-        a1 = D.Categorical(logit=h_z1)
-
-        # simple sampling is not differentiable
-        h_z1 = F.relu(self.z1_linear1(gumbel_softmax_sampling(a1)))
-
-        z2 = F.relu(self.z1_linear2(F.concat((h_z1, z1), axis=1)))
-        h_z2 = F.relu(self.z2_linear(z2))
-        a2 = D.Categorical(logit=h_z2)
-
-        return a1, a2
-
-
-class SpiralV(chainer.Chain):
-    """ CNN-LSTM V function """
-    def __init__(self, obs_spaces, in_channel=3):
-        self.in_channel = in_channel
-        self.obs_pos_dim = obs_spaces.spaces['position'].n
-        self.obs_q_dim = obs_spaces.spaces['prob'].n  # 1
-
-        super().__init__()
-        with self.init_scope():
-            self.conv1 = L.Convolution2D(self.in_channel, 32, ksize=5)
-            self.linear_a1 = L.Linear(1, out_size=16)
-            self.linear_a2 = L.Linear(1, out_size=16)
-            self.conv2 = L.Convolution2D(32, 32, stride=2, ksize=4)
-            self.conv3 = L.Convolution2D(32, 32, stride=2, ksize=4)
-            self.conv4 = L.Convolution2D(32, 32, stride=2, ksize=4)
-
-            self.linear_2 = L.Linear(800, 128)
-            self.lstm = L.LSTM(128, 128)
-
-            self.linear_out = L.Linear(128, 1)
-
-    def __call__(self, obs):
-        """ forward single step. return actions aas categorical distributions. """
-        # image and action at the last step
-        # a has position (a1) and prob (a2)
-        c, a1, a2 = obs
-        
-        h_a1 = F.relu(self.linear_a1(a1))
-        h_a2 = F.relu(self.linear_a2(a2))
-        h_a = F.concat((h_a1, h_a2), axis=1)
-        h = F.relu(self.conv1(c))
-
-        # repeat h_a and adds to feature from the conv
-        imshape = h.shape[2:]
-        h = h + F.reshape(F.tile(h_a, imshape), (1, 32) + imshape)
-        
-        h = F.relu(self.conv2(h))
-        h = F.relu(self.conv3(h))
-        h = F.relu(self.conv4(h))
-
-        # TODO: insert ResBlock 3x3
-        h = F.expand_dims(F.flatten(h), 0)
-        h = F.relu(self.linear_2(h))
-
-        h = self.lstm(h)
-
-        v = F.relu(self.linear_out(h))
-        return v
-
-class SpiralD(chainer.Chain):
-    """ Discriminator """
-    def __init__(self, in_channel=3):
-        self.in_channel = in_channel
-        super().__init__()
-        with self.init_scope():
-            self.c1 = L.Convolution2D(self.in_channel, 32, stride=1, ksize=3, pad=1)
-            self.c2 = L.Convolution2D(32, 48, stride=2, ksize=3, pad=1)
-            self.c3 = L.Convolution2D(48, 52, stride=1, ksize=3, pad=1)
-            self.c4 = L.Convolution2D(52, 64, stride=2, ksize=3, pad=1)
-            self.c5 = L.Convolution2D(64, 64, stride=1, ksize=3, pad=1)
-            self.c6 = L.Convolution2D(64, 128, stride=2, ksize=3, pad=1)
-            self.b2 = L.BatchNormalization(48, use_gamma=False)
-            self.b3 = L.BatchNormalization(52, use_gamma=False)
-            self.b4 = L.BatchNormalization(64, use_gamma=False)
-            self.b5 = L.BatchNormalization(64, use_gamma=False)
-            self.b6 = L.BatchNormalization(128, use_gamma=False)
-            self.l7 = L.Linear(8 * 8 * 128, 1)
-        
-    def __call__(self, x):
-        h = x
-        h = F.leaky_relu(self.c1(h))
-        h = F.leaky_relu(self.b2(self.c2(h)))
-        h = F.leaky_relu(self.b3(self.c3(h)))
-        h = F.leaky_relu(self.b4(self.c4(h)))
-        h = F.leaky_relu(self.b5(self.c5(h)))
-        h = F.leaky_relu(self.b6(self.c6(h)))
-        return self.l7(h)
-                
-
-class SPIRALSimpleModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixin):
-    """ A simple model """
-    def __init__(self, obs_spaces, action_spaces, in_channel=3):
-        
-        # define policy and value networks
-        self.pi = SpiralPi(obs_spaces, action_spaces, in_channel)
-        self.v = SpiralV(obs_spaces, in_channel)
-
-        super().__init__(self.pi, self.v)
-    
-    def pi_and_v(self, state):
-        """ Forwarding single step """
-        return self.pi(state), self.v(state)
 
 def main():
     import logging
@@ -274,7 +85,7 @@ def main():
     in_channel = 1
 
     gen = SPIRALSimpleModel(obs_space, action_space, in_channel)  # generator
-    dis = SpiralD(in_channel)  # discriminator
+    dis = SpiralDiscriminator(in_channel)  # discriminator
 
     gen_opt = rmsprop_async.RMSpropAsync(
         lr=args.lr, eps=args.rmsprop_epsilon, alpha=0.99)
