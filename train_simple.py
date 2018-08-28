@@ -88,7 +88,6 @@ class SpiralPi(chainer.Chain):
         # a has position (a1) and prob (a2)
         c, a1, a2 = obs
         
-        # import ipdb; ipdb.set_trace()
         h_a1 = F.relu(self.linear_a1(a1))
         h_a2 = F.relu(self.linear_a2(a2))
         h_a = F.concat((h_a1, h_a2), axis=1)
@@ -241,6 +240,8 @@ def main():
     parser.add_argument('--eval-n-runs', type=int, default=1)
     parser.add_argument('--load', type=str, default='')
     parser.add_argument('--demo', action='store_true', default=False)
+    parser.add_argument('--rollout_n', type=int, default=2)
+    parser.add_argument('--profile', action='store_true')
     args = parser.parse_args()
 
     # init a logger
@@ -251,12 +252,6 @@ def main():
     # deterministic even with the same random seed.
     misc.set_random_seed(args.seed)
 
-    # Set different random seeds for different subprocesses.
-    # If seed=0 and processes=4, subprocess seeds are [0, 1, 2, 3].
-    # If seed=1 and processes=4, subprocess seeds are [4, 5, 6, 7].
-    process_seeds = np.arange(args.processes) + args.seed * args.processes
-    assert process_seeds.max() < 2 ** 32
-
     # create directory to put the results
     args.outdir = experiments.prepare_output_dir(args, args.outdir)
 
@@ -264,11 +259,6 @@ def main():
     def make_env(process_idx, test):
         env = MyPaintEnv()
 
-        # Use different random seeds for train and test envs
-        process_seed = int(process_seeds[process_idx])
-        env_seed = 2 ** 32 - 1 - process_seed if test else process_seed
-        env.seed(env_seed)
-        
         # TODO: implement test mode
         # TODO: implement reward filter?
         
@@ -313,29 +303,50 @@ def main():
         y = 1.0 - y  # background: black -> white
         return chainer.Variable(y)
 
-    agent = spiral.SPIRAL(gen, dis, gen_opt, dis_opt, target_data_sampler, in_channel)
+    agent = spiral.SPIRAL(
+        generator=gen,
+        discriminator=dis,
+        gen_optimizer=gen_opt,
+        dis_optimizer=dis_opt,
+        in_channel=in_channel,
+        target_data_sampler=target_data_sampler,
+        timestep_limit=timestep_limit,
+        rollout_n=args.rollout_n
+    )
+
+    step_hook = spiral.SpiralStepHook(timestep_limit)
 
     if args.load:
         agent.load(args.load)
 
     if args.demo:
-        # IN PROGRESS
         env = make_env(0, True)
         show_drawn_pictures(env, agent, timestep_limit)
 
     else:
-        # train
-        # single core for debug
-        # TODO: change to train_async
-        experiments.train_agent_with_evaluation(
+        experiments.train_agent_async(
             agent=agent,
-            env=make_env(0, False),
+            outdir=args.outdir,
+            processes=args.processes,
+            make_env=make_env,
+            profile=args.profile,
             steps=args.steps,
             eval_n_runs=args.eval_n_runs,
             eval_interval=args.eval_interval,
-            max_episode_len=timestep_limit,
-            outdir=args.outdir
-            )
+            max_episode_len=timestep_limit * args.rollout_n,
+            global_step_hooks=[step_hook]
+        )
+        # experiments.train_agent_with_evaluation(
+        #     agent=agent,
+        #     outdir=args.outdir,
+        #     env=make_env(0, False),
+        #     steps=args.steps,
+        #     eval_n_runs=args.eval_n_runs,
+        #     eval_interval=args.eval_interval,
+        #     max_episode_len=timestep_limit * args.rollout_n,
+        #     step_hooks=[step_hook]
+        # )
+
 
 if __name__ == '__main__':
     main()
