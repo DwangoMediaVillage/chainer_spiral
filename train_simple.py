@@ -135,28 +135,28 @@ def main():
         show_drawn_pictures(env, agent, timestep_limit)
 
     else:
-        experiments.train_agent_async(
-            agent=agent,
-            outdir=args.outdir,
-            processes=args.processes,
-            make_env=make_env,
-            profile=args.profile,
-            steps=args.steps,
-            eval_n_runs=args.eval_n_runs,
-            eval_interval=args.eval_interval,
-            max_episode_len=timestep_limit * args.rollout_n,
-            global_step_hooks=[step_hook]
-        )
-        # experiments.train_agent_with_evaluation(
+        # experiments.train_agent_async(
         #     agent=agent,
         #     outdir=args.outdir,
-        #     env=make_env(0, False),
+        #     processes=args.processes,
+        #     make_env=make_env,
+        #     profile=args.profile,
         #     steps=args.steps,
         #     eval_n_runs=args.eval_n_runs,
         #     eval_interval=args.eval_interval,
         #     max_episode_len=timestep_limit * args.rollout_n,
-        #     step_hooks=[step_hook]
+        #     global_step_hooks=[step_hook]
         # )
+        experiments.train_agent_with_evaluation(
+            agent=agent,
+            outdir=args.outdir,
+            env=make_env(0, False),
+            steps=args.steps,
+            eval_n_runs=args.eval_n_runs,
+            eval_interval=args.eval_interval,
+            max_episode_len=timestep_limit * args.rollout_n,
+            step_hooks=[step_hook]
+        )
 
 
 if __name__ == '__main__':

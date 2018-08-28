@@ -69,7 +69,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  average_entropy_decay=0.999,
                  average_value_decay=0.999,
                  process_idx=0,
-                 gp_lambda=10.0):
+                 gp_lambda=10.0,
+                 continuous_drawing_lambda=1.0,
+                 empty_drawing_penalty=1.0):
+
+        
 
         # globally shared model
         self.shared_generator = generator
@@ -96,12 +100,19 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         self.gp_lamda = gp_lambda
 
+        self.continuous_drawing_lambda = continuous_drawing_lambda
+        
+        assert empty_drawing_penalty > 0
+        self.empty_drawing_penalty = empty_drawing_penalty
+
         self.average_value_decay = average_value_decay
         self.average_entropy_decay = average_entropy_decay
 
         self.t = 0  # time step counter
         self.n = 0  # episode counter
-
+        self.continuous_drawing_step = 0
+        self.drawn = False
+        
         # buffers to store hist during episodes
         self.past_action_log_prob = {}
         self.past_action_entropy = {}
@@ -110,6 +121,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.past_dis_prob = {}
         self.target_data = None  # target picture being sampled by target_data_sampler
         self.fake_data = None  # faked pictures by generator (pi and v network)
+        self.past_brush_prob = {}  # sampled action to determine drawing or not from the previous point
 
         # buffers for get_statistics
         self.stat_l2_loss = 0
@@ -191,7 +203,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # Sample actions as scalar values
         x, q = [ p.sample().data[0] for p in pout ]
-        
+
+        # get local time step at each episode
         if self.t // self.timestep_limit == 0:
             t = self.t
         else:
@@ -201,6 +214,23 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             logger.debug("act_and_train at step %s, local_step %s", self.t, t)
 
         concat = self.t // self.timestep_limit > 0
+
+        # calc additional reward during drawing process
+        if not t in self.past_reward.keys():
+            self.past_reward[t] = 0.0
+
+        if t > 0:
+            if float(self.past_brush_prob[t-1].data[-1, 0]) and float(q):
+                self.continuous_drawing_step += 1
+                self.drawn = True
+            else:
+                self.continuous_drawing_step = 0
+
+        if self.continuous_drawing_step > 0:
+            self.past_reward[t] += self.continuous_drawing_lambda * 1.0 / self.continuous_drawing_step
+
+        # store entropy, log prob of the estimated action distribution, and value
+        self.__store_buffer(self.past_brush_prob, t, np.reshape(q, (1, 1)), concat)
 
         entropy = sum([ F.sum(p.entropy) for p in pout ])
         entropy = F.reshape(entropy, (1, 1))
@@ -231,7 +261,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
 
     def compute_reward(self, image):
-        """ compute the reward by the discriminator """
+        """ compute the reward by the discriminator at the end of drawing """
         c = self.__process_image(image)
         r = self.discriminator(c)
 
@@ -255,6 +285,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # compute L2 loss between target data and drawn picture by the agent
         self.stat_l2_loss += F.mean_squared_error(c, y).data / float(self.rollout_n)
 
+        # add negative reward if the agent did not draw anything
+        if not self.drawn:
+            self.past_reward[self.timestep_limit - 1] -= self.empty_drawing_penalty
 
     def stop_episode_and_train(self, obs, r, done=None):
         state = self.__process_obs(obs)
@@ -271,9 +304,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         if self.process_idx == 0:
             logger.debug('Accumulate grads t = %s -> 0', self.t)
-        
+
         for t in reversed(range(self.timestep_limit)):
             R *= self.gamma  # discout factor
+            R += self.past_reward[t]
+
             v = self.past_values[t]
             advantage = R - v
             
@@ -350,7 +385,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # reset time step count
         self.t = 0
-
+        self.continuous_drawing_step = 0
+        self.drawn = False
 
     def get_statistics(self):
         # returns statistics after updating. reset stat_l2_loss
