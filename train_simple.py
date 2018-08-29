@@ -28,9 +28,9 @@ from chainerrl.optimizers import rmsprop_async
 
 from enviroments import MyPaintEnv
 from agents import spiral
-from spiral_evaluator import show_drawn_pictures
+from spiral_evaluator import show_drawn_pictures, run_demo
 from models.spiral import SpiralDiscriminator, SPIRALSimpleModel
-
+from utils.arg_utils import load_args, print_args
 
 def main():
     import logging
@@ -65,13 +65,23 @@ def main():
     # init a logger
     logging.basicConfig(level=args.logger_level)
 
+    # load arguments from the load directory
+    if args.demo and args.load:
+        arg_log = os.path.abspath(
+            os.path.join(args.load, os.pardir, 'args.txt')
+        )
+        args = load_args(args, arg_log, exceptions=('load', 'demo'))
+        logging.info('Load arguments: ')
+        print_args(args)
+
     # Set a random seed used in ChainerRL.
     # If you use more than one processes, the results will be no longer
     # deterministic even with the same random seed.
     misc.set_random_seed(args.seed)
 
     # create directory to put the results
-    args.outdir = experiments.prepare_output_dir(args, args.outdir)
+    if not (args.load and args.demo):
+        args.outdir = experiments.prepare_output_dir(args, args.outdir)
 
     # define func to create env
     def make_env(process_idx, test):
@@ -155,7 +165,12 @@ def main():
 
     if args.demo:
         env = make_env(0, True)
-        show_drawn_pictures(env, agent, timestep_limit)
+        if args.load:
+            savename = os.path.join(args.load, 'result.mp4')
+        else:
+            savename = os.path.join(args.outdir, 'result.mp4')
+
+        run_demo(env, agent, timestep_limit, suptitle=args.load, savename=savename)
 
     else:
         if args.processes == 1:

@@ -116,7 +116,7 @@ class MyPaintEnv(gym.Env):
             }
         return ob, reward, done, {}
 
-    def __convert_x(self, x):
+    def convert_x(self, x):
         """ convert position id -> a point (p1, p2) """
         p1 = (x % self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
         p2 = (x // self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
@@ -125,7 +125,7 @@ class MyPaintEnv(gym.Env):
         return p1, p2
 
     def __draw(self, x, pressure, xtilt=0, ytilt=0, dtime=0.1, viewzoom=1.0, viewrotation=0.0):
-        p1, p2 = self.__convert_x(x)
+        p1, p2 = self.convert_x(x)
         self.surface.begin_atomic()
         self.brush.stroke_to(
             self.surface.backend,
