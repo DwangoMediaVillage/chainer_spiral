@@ -53,6 +53,12 @@ def main():
     parser.add_argument('--demo', action='store_true', default=False)
     parser.add_argument('--rollout_n', type=int, default=2)
     parser.add_argument('--profile', action='store_true')
+    parser.add_argument('--gamma', type=float, default=0.9)
+    parser.add_argument('--beta', type=float, default=1e-2)
+    parser.add_argument('--gp_lambda', type=float, default=10.0)
+    parser.add_argument('--continuous_drawing_lambda', type=float, default=0.1)
+    parser.add_argument('--empty_drawing_penalty', type=float, default=1.0)
+    parser.add_argument('--use_wgangp', action='store_true', default=False)
     args = parser.parse_args()
 
     # init a logger
@@ -132,7 +138,13 @@ def main():
         in_channel=in_channel,
         target_data_sampler=target_data_sampler,
         timestep_limit=timestep_limit,
-        rollout_n=args.rollout_n
+        rollout_n=args.rollout_n,
+        gamma=args.gamma,
+        beta=args.beta,
+        gp_lambda=args.gp_lambda,
+        continuous_drawing_lambda=args.continuous_drawing_lambda,
+        empty_drawing_penalty=args.empty_drawing_penalty,
+        use_wgangp=args.use_wgangp
     )
 
     step_hook = spiral.SpiralStepHook(timestep_limit)
@@ -145,28 +157,30 @@ def main():
         show_drawn_pictures(env, agent, timestep_limit)
 
     else:
-        experiments.train_agent_async(
-            agent=agent,
-            outdir=args.outdir,
-            processes=args.processes,
-            make_env=make_env,
-            profile=args.profile,
-            steps=args.steps,
-            eval_n_runs=args.eval_n_runs,
-            eval_interval=args.eval_interval,
-            max_episode_len=timestep_limit * args.rollout_n,
-            global_step_hooks=[step_hook]
-        )
-        # experiments.train_agent_with_evaluation(
-        #     agent=agent,
-        #     outdir=args.outdir,
-        #     env=make_env(0, False),
-        #     steps=args.steps,
-        #     eval_n_runs=args.eval_n_runs,
-        #     eval_interval=args.eval_interval,
-        #     max_episode_len=timestep_limit * args.rollout_n,
-        #     step_hooks=[step_hook]
-        # )
+        if args.processes == 1:
+            experiments.train_agent_with_evaluation(
+                agent=agent,
+                outdir=args.outdir,
+                env=make_env(0, False),
+                steps=args.steps,
+                eval_n_runs=args.eval_n_runs,
+                eval_interval=args.eval_interval,
+                max_episode_len=timestep_limit * args.rollout_n,
+                step_hooks=[step_hook]
+            )
+        else:
+            experiments.train_agent_async(
+                agent=agent,
+                outdir=args.outdir,
+                processes=args.processes,
+                make_env=make_env,
+                profile=args.profile,
+                steps=args.steps,
+                eval_n_runs=args.eval_n_runs,
+                eval_interval=args.eval_interval,
+                max_episode_len=timestep_limit * args.rollout_n,
+                global_step_hooks=[step_hook]
+            )
 
 
 if __name__ == '__main__':
