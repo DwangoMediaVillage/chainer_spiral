@@ -439,7 +439,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
 
     def get_statistics(self):
-        # returns statistics after updating. reset stat_l2_loss
+        # returns statistics after updating and reset stat_l2_loss
         ret = [
             ('average_value', self.stat_average_value),
             ('average_entropy', self.stat_average_entropy),
@@ -456,6 +456,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             ret += [
                 ('discriminator_accuracy', self.stat_dis_acc)
             ]
+        
+        self.stat_l2_loss = 0.0
 
         return ret
 
