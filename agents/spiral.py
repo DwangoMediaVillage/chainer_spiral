@@ -231,7 +231,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             t = self.t
         else:
             t = self.t % self.timestep_limit
-        
+
         if self.process_idx == 0:
             logger.debug("act_and_train at step %s, local_step %s", self.t, t)
 

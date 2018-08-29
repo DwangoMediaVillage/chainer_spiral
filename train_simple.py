@@ -59,6 +59,7 @@ def main():
     parser.add_argument('--continuous_drawing_lambda', type=float, default=0.1)
     parser.add_argument('--empty_drawing_penalty', type=float, default=1.0)
     parser.add_argument('--use_wgangp', action='store_true', default=False)
+    parser.add_argument('--max_episode_steps', type=int, default=10)
     args = parser.parse_args()
 
     # init a logger
@@ -74,14 +75,14 @@ def main():
 
     # define func to create env
     def make_env(process_idx, test):
-        env = MyPaintEnv()
+        env = MyPaintEnv(max_episode_steps=args.max_episode_steps)
 
         # TODO: implement test mode
         # TODO: implement reward filter?
         
         return env
 
-    sample_env = MyPaintEnv()
+    sample_env = MyPaintEnv(max_episode_steps=args.max_episode_steps)
     
     # TODO: MyPaintEnv is not wrapped by EnvSpec
     timestep_limit = sample_env.tags['max_episode_steps']
@@ -158,6 +159,7 @@ def main():
 
     else:
         if args.processes == 1:
+            agent.process_idx = 0
             experiments.train_agent_with_evaluation(
                 agent=agent,
                 outdir=args.outdir,
