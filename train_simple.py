@@ -37,18 +37,18 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('processes', type=int)
-    parser.add_argument('--logger-level', type=int, default=logging.DEBUG)
+    parser.add_argument('--logger_level', type=int, default=logging.DEBUG)
     parser.add_argument('--outdir', type=str, default='results',
                             help='Directory path to save output files.'
                                 ' If it does not exist, it will be created.')
     parser.add_argument('--seed', type=int, default=0,
                         help='Random seed [0, 2 ** 32)')
     parser.add_argument('--lr', type=float, default=7e-4)
-    parser.add_argument('--rmsprop-epsilon', type=float, default=1e-1)
-    parser.add_argument('--weight-decay', type=float, default=0.0)
+    parser.add_argument('--rmsprop_epsilon', type=float, default=1e-1)
+    parser.add_argument('--weight_decay', type=float, default=0.0)
     parser.add_argument('--steps', type=int, default=20)
-    parser.add_argument('--eval-interval', type=int, default=10)
-    parser.add_argument('--eval-n-runs', type=int, default=1)
+    parser.add_argument('--eval_interval', type=int, default=10)
+    parser.add_argument('--eval_n_runs', type=int, default=1)
     parser.add_argument('--load', type=str, default='')
     parser.add_argument('--demo', action='store_true', default=False)
     parser.add_argument('--rollout_n', type=int, default=2)
