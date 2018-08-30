@@ -12,6 +12,7 @@ pycairo = "*"
 nose = "*"
 matplotlib = "*"
 opencv-python = "*"
+pandas = "*"
 
 [dev-packages]
 ipython = "*"
