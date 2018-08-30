@@ -4,35 +4,19 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-cached-property = "*"
-chainer = {editable = true, ref = "v5.0.0b4", git = "https://github.com/chainer/chainer"}
-fastcache = "*"
-funcsigs = "*"
-future = "*"
-gym = ">=0.7.3"
-numpy = ">=1.10.4"
-scipy = "*"
-statistics = "*"
-Pillow = "*"
+chainer = {ref = "v5.0.0b4", git = "https://github.com/chainer/chainer"}
+gym = "*"
+chainerrl = "*"
 pygobject = "*"
-pyobjc = "*"
 pycairo = "*"
 nose = "*"
 matplotlib = "*"
-chainerrl = "*"
 opencv-python = "*"
 
 [dev-packages]
 ipython = "*"
 ipdb = "*"
-pillow = "*"
 pylint = "*"
 
 [requires]
 python_version = "3.7"
-
-[scripts]
-test = "nosetests tests"
-random = "python random_drawing.py"
-debug = "python train_simple.py 1"
-env = "python env/mypaint_env.py"
