@@ -48,6 +48,10 @@ class SpiralStepHook(StepHook):
             agent.compute_reward(env.render(mode='rgb_array'))
 
 
+def np_softplus(x):
+    return np.maximum(0, x) + np.log(1 + np.exp(-np.abs(-x)))
+
+
 class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     """ SPIRAL: Synthesizing Programs for Images using Reinforced Adversarial Learning.
 
@@ -165,7 +169,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.real_data = {}
         self.past_R = {}
         self.fake_data = {}
-    
+        self.y_fake = {}
+
     def __reset_stats(self):
         """ reset interval buffers for statistics """
         # buffers for get_statistics
@@ -287,8 +292,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     def compute_reward(self, image):
         """ compute the reward by the discriminator at the end of drawing """
         c = self.__process_image(image)
-        
-        R = self.discriminator(c)
+        y_fake = self.discriminator(c)
+
+        if not self.use_wgangp:
+            R = np_softplus(y_fake.data)
 
         n = (self.t - 1) // self.timestep_limit
     
@@ -300,6 +307,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.real_data[n] = self.target_data_sampler()
         self.fake_data[n] = c
         self.past_R[n] = R
+        self.y_fake[n] = y_fake
 
         # compute L2 loss between target data and drawn picture by the agent
         self.stat_l2_loss += F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
@@ -326,6 +334,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         for n in reversed(range(self.rollout_n)):
             R = self.past_R[n].data[0, 0]  # prob by the discriminator
+
             for t in reversed(range(self.timestep_limit)):
                 R *= self.gamma  # discount factor
                 R += self.past_reward[n, t]
@@ -370,7 +379,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.gen_optimizer.update()
 
         # update the local discrimintor
-        y_fake = F.concat(self.past_R.values())
+        y_fake = F.concat(self.y_fake.values())
         y_real = self.discriminator(F.concat(self.real_data.values(), axis=0))
         self.__compute_discriminator_grad(y_real, y_fake)
         
