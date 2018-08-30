@@ -67,10 +67,6 @@ def plot_score(args):
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     plt.show()
 
-
-
-    import ipdb; ipdb.set_trace()
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('target_dir')
