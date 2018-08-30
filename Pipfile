@@ -20,3 +20,9 @@ pylint = "*"
 
 [requires]
 python_version = "3.7"
+
+[scripts]
+test = "nosetests tests"
+random = "python random_drawing.py"
+debug = "python train_simple.py 1"
+train = "python train_simple.py 2"

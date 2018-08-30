@@ -90,7 +90,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  gp_lambda=10.0,
                  continuous_drawing_lambda=1.0,
                  empty_drawing_penalty=1.0,
-                 use_wgangp=True):
+                 use_wgangp=True,
+                 pi_loss_coef=1.0,
+                 v_loss_coef=1.0):
         
         # globally shared model
         self.shared_generator = generator
@@ -118,6 +120,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.gp_lamda = gp_lambda
         self.use_wgangp = use_wgangp
 
+        self.pi_loss_coef = pi_loss_coef
+        self.v_loss_coef = v_loss_coef
+
         self.continuous_drawing_lambda = continuous_drawing_lambda
         
         assert empty_drawing_penalty > 0
@@ -125,34 +130,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         self.average_value_decay = average_value_decay
         self.average_entropy_decay = average_entropy_decay
+        self.stat_average_value = 0.0
+        self.stat_average_entropy = 0.0
 
-        self.t = 0  # time step counter
-        self.n = 0  # episode counter
-        self.continuous_drawing_step = 0
-        self.drawn = False
-        
-        # buffers to store hist during episodes
-        self.past_action_log_prob = {}
-        self.past_action_entropy = {}
-        self.past_values = {}
-        self.past_reward = {}
-        self.past_dis_prob = {}
-        self.target_data = None  # target picture being sampled by target_data_sampler
-        self.fake_data = None  # faked pictures by generator (pi and v network)
-        self.past_brush_prob = {}  # sampled action to determine drawing or not from the previous point
+        self.__reset_flags()
+        self.__reset_buffers()
+        self.__reset_stats()
 
-        # buffers for get_statistics
-        self.stat_l2_loss = 0
-        self.stat_average_value = 0
-        self.stat_average_entropy = 0
-        
-        self.stat_loss_dis = None
-
-        if self.use_wgangp:
-            self.stat_loss_gp = None
-            self.stat_dis_g = None
-        else:
-            self.stat_dis_acc = None
 
     def sync_parameters(self):
         copy_param.copy_param(target_link=self.generator,
@@ -160,11 +144,45 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         copy_param.copy_param(target_link=self.discriminator,
                                 source_link=self.shared_discriminator)
 
-
     @property
     def shared_attributes(self):
         return ('shared_generator', 'shared_discriminator', 'gen_optimizer', 'dis_optimizer')
 
+    def __reset_flags(self):
+        self.t = 0  # time step counter
+        self.continuous_drawing_step = 0
+
+    def __reset_buffers(self):
+        """ reset internal buffers """
+        # buffers to store hist during episodes
+        self.past_reward = np.zeros((self.rollout_n, self.timestep_limit))
+
+        # sampled action to determine drawing or not from the previous point
+        self.past_brush_prob = {}
+        self.past_action_entropy = {}
+        self.past_action_log_prob = {}
+        self.past_values = {}
+        self.real_data = {}
+        self.past_R = {}
+        self.fake_data = {}
+    
+    def __reset_stats(self):
+        """ reset interval buffers for statistics """
+        # buffers for get_statistics
+        self.stat_l2_loss = 0
+        self.stat_pi_loss = None
+        self.stat_v_loss = None
+        self.stat_R = None
+        self.stat_reward_min = None
+        self.stat_reward_max = None
+        self.stat_reward_mean = None
+        self.stat_reward_std = None
+        self.stat_loss_dis = None
+        if self.use_wgangp:
+            self.stat_loss_gp = None
+            self.stat_dis_g = None
+        else:
+            self.stat_dis_acc = None
 
     def __process_obs(self, obs):
         c = obs['image']
@@ -184,7 +202,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         return c, x, q
     
-
     def __process_image(self, image):
         if self.in_channel == 1:
             image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -195,23 +212,20 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         image = np.rollaxis(image, -1)
         image = np.expand_dims(image, 0)
         return  image
-        
-
+    
     def __pack_action(self, x, q):
         return {'position': x,
                 'pressure': 1.0,
                 'color': (0.0, 0.0, 0.0),
                 'prob': q }
 
-
-    def __store_buffer(self, buffer, t, x, concat):
-        """ store x to the buffer. Replace or concat """
-
-        if concat:
-            buffer[t] = F.concat((buffer[t], x), axis=0)
+    def __get_local_time(self):
+        n = self.t // self.timestep_limit
+        if n  == 0:
+            t = self.t
         else:
-            # replace with x
-            buffer[t] = x
+            t = self.t % self.timestep_limit
+        return n, t
 
 
     def act_and_train(self, obs, r):
@@ -227,43 +241,31 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         x, q = [ p.sample().data[0] for p in pout ]
 
         # get local time step at each episode
-        if self.t // self.timestep_limit == 0:
-            t = self.t
-        else:
-            t = self.t % self.timestep_limit
+        n, t = self.__get_local_time()
 
         if self.process_idx == 0:
-            logger.debug("act_and_train at step %s, local_step %s", self.t, t)
-
-        concat = self.t // self.timestep_limit > 0
+            logger.debug("act_and_train at step %s, local_step %s, local_episode %s", self.t, t, n)
 
         # calc additional reward during drawing process
-        if not t in self.past_reward.keys():
-            self.past_reward[t] = 0.0
-
         if t > 0:
-            if float(self.past_brush_prob[t-1].data[-1, 0]) and float(q):
+            if float(self.past_brush_prob[n, t - 1]) and float(q):
                 self.continuous_drawing_step += 1
-                self.drawn = True
             else:
                 self.continuous_drawing_step = 0
 
+        self.past_brush_prob[n, t] = q
+
         if self.continuous_drawing_step > 0:
-            self.past_reward[t] += self.continuous_drawing_lambda * 1.0 / self.continuous_drawing_step
-
-        # store entropy, log prob of the estimated action distribution, and value
-        self.__store_buffer(self.past_brush_prob, t, np.reshape(q, (1, 1)), concat)
-
+            continuous_reward = self.continuous_drawing_lambda * 1.0 / self.continuous_drawing_step
+            self.past_reward[n, t] = continuous_reward
+        
         entropy = sum([ F.sum(p.entropy) for p in pout ])
-        entropy = F.reshape(entropy, (1, 1))
-        self.__store_buffer(self.past_action_entropy, t, entropy, concat)
+        self.past_action_entropy[n, t] = entropy
 
         log_prob = sum([ p.log_prob(a) for p, a in zip(pout, (x, q)) ])
-        log_prob = F.reshape(log_prob, (1, 1))
-        self.__store_buffer(self.past_action_log_prob, t, log_prob, concat)
-
-        vout = F.reshape(vout, (1, 1))
-        self.__store_buffer(self.past_values, t, vout, concat)
+        self.past_action_log_prob[n, t] = log_prob
+        
+        self.past_values[n, t] = vout
 
         # update stats (average value and entropy )
         self.stat_average_value += (
@@ -271,7 +273,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             (float(vout.data[0, 0]) - self.stat_average_value))
         self.stat_average_entropy += (
             (1 - self.average_entropy_decay) *
-            (float(entropy.data[0, 0]) - self.stat_average_entropy))
+            (float(entropy.data) - self.stat_average_entropy))
         
         # create action dictionary to the env
         action = self.__pack_action(x, q)
@@ -286,84 +288,91 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         """ compute the reward by the discriminator at the end of drawing """
         c = self.__process_image(image)
         
-        r = self.discriminator(c)
+        R = self.discriminator(c)
 
+        n = (self.t - 1) // self.timestep_limit
+    
         # store reward to the buffer
         if self.process_idx == 0:
-            logger.debug('compute reward = %s at local_step  %s', r, self.timestep_limit - 1)
+            logger.debug('compute final reward = %s at local_episode %s', R, n)
 
-        concat = self.t // self.timestep_limit > 1
-        self.__store_buffer(self.past_dis_prob, self.timestep_limit - 1, r, concat)
-
-        # sample an image from the dataset, and stores to the buf
-        y = self.target_data_sampler()
-
-        if concat:
-            self.target_data = F.concat((self.target_data, y), axis=0)
-            self.fake_data = F.concat((self.fake_data, c), axis=0)
-        else:
-            self.target_data = y
-            self.fake_data = c
+        # sample an image from the dataset
+        self.real_data[n] = self.target_data_sampler()
+        self.fake_data[n] = c
+        self.past_R[n] = R
 
         # compute L2 loss between target data and drawn picture by the agent
-        self.stat_l2_loss += F.mean_squared_error(c, y).data / float(self.rollout_n)
+        self.stat_l2_loss += F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
 
         # add negative reward if the agent did not draw anything
-        if not self.drawn:
-            self.past_reward[self.timestep_limit - 1] -= self.empty_drawing_penalty
-
+        past_brush_prob = sum([ self.past_brush_prob[n, t] for t in range(self.timestep_limit) ])
+        if not past_brush_prob:
+            self.past_reward[n, self.timestep_limit - 1] -= self.empty_drawing_penalty
 
     def stop_episode_and_train(self, obs, r, done=None):
         state = self.__process_obs(obs)
         c, _, _ = state
         self.__update(c)
-
+        self.__reset_buffers()
+        self.__reset_flags()
 
     def __update(self, c):
         """ update generator and discriminator at the end of drawing """
-        R = self.past_dis_prob[self.timestep_limit - 1].data  # prob by the discriminator
-
+        if self.process_idx == 0:
+            logger.debug('Accumulate grads')
+        
         pi_loss = 0
         v_loss = 0
 
-        if self.process_idx == 0:
-            logger.debug('Accumulate grads t = %s -> 0', self.t)
+        for n in reversed(range(self.rollout_n)):
+            R = self.past_R[n].data[0, 0]  # prob by the discriminator
+            for t in reversed(range(self.timestep_limit)):
+                R *= self.gamma  # discount factor
+                R += self.past_reward[n, t]
+                v = self.past_values[n, t]
+                advantage = R - v
 
-        for t in reversed(range(self.timestep_limit)):
-            R *= self.gamma  # discout factor
-            R += self.past_reward[t]
+                log_prob = self.past_action_log_prob[n, t]
+                entropy = self.past_action_entropy[n, t]
 
-            v = self.past_values[t]
-            advantage = R - v
-            
-            # Accumulate gradients of policy
-            log_prob = self.past_action_log_prob[t]
-            entropy = self.past_action_entropy[t]
+                pi_loss -= log_prob * float(advantage.data)
+                pi_loss -= self.beta * entropy
 
-            pi_loss -= log_prob * np.asarray(advantage.data)
-            pi_loss -= self.beta * entropy
+                v_loss += (v - R) ** 2 / 2
 
-            v_loss += (v - R) ** 2 / 2
+        if self.pi_loss_coef != 1.0:
+            pi_loss *= self.pi_loss_coef
+        if self.v_loss_coef != 1.0:
+            v_loss *= self.v_loss_coef
+        
+        # normalize by each step
+        pi_loss /= self.timestep_limit * self.rollout_n
+        v_loss /= self.timestep_limit * self.rollout_n
+        
+        total_loss = pi_loss + F.reshape(v_loss, pi_loss.data.shape)
 
         if self.process_idx == 0:
             logger.debug('pi_loss:%s v_loss:%s', pi_loss.data, v_loss.data)
-
-        total_loss = pi_loss + F.reshape(v_loss, pi_loss.data.shape)
-        total_loss = F.mean(total_loss, axis=0)  # take mean along batch axis
 
         # compute gradients of the generator
         self.generator.zerograds()
         total_loss.backward()
 
-        # update the local discriminator
-        y_fake = self.past_dis_prob[self.timestep_limit - 1]
-        y_real = self.discriminator(self.target_data)
-        self.__compute_discriminator_grad(y_real, y_fake)
-
         # copy the gradients of the local generator to the globally shared model
         self.shared_generator.zerograds()
         copy_param.copy_grad(
             target_link=self.shared_generator, source_link=self.generator)
+
+        # update the gobally shared model
+        if self.process_idx == 0:
+            norm = sum(np.sum(np.square(param.grad)) for param in self.gen_optimizer.target.params())
+            logger.debug('grad_norm of generator: %s', norm)
+        self.gen_optimizer.update()
+
+        # update the local discrimintor
+        y_fake = F.concat(self.past_R.values())
+        y_real = self.discriminator(F.concat(self.real_data.values(), axis=0))
+        self.__compute_discriminator_grad(y_real, y_fake)
         
         # copy the gradients of the local discriminator to the globall shared model
         self.shared_discriminator.zerograds()
@@ -371,25 +380,23 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             target_link=self.shared_discriminator, source_link=self.discriminator)
 
         # Perform asynchronous update
-        self.gen_optimizer.update()
         self.dis_optimizer.update()
 
         self.sync_parameters()
         self.generator.unchain_backward()
 
-        # reset the buffers
-        self.past_action_log_prob = {}
-        self.past_action_entropy = {}
-        self.past_values = {}
-        self.past_reward = {}
-        self.past_dis_prob = {}
-        self.target_data = None
+        # update statistics
+        self.stat_pi_loss = float(pi_loss.data)
+        self.stat_v_loss = float(v_loss.data)
+        self.stat_R = F.concat(self.past_R.values()).data.mean()
+        self.stat_reward_min = self.past_reward.min()
+        self.stat_reward_max = self.past_reward.max()
+        self.stat_reward_mean = self.past_reward.mean()
+        self.stat_reward_std = self.past_reward.std()
 
-        # reset time step count
-        self.t = 0
-        self.continuous_drawing_step = 0
-        self.drawn = False
-
+        # reset
+        self.__reset_buffers()
+        self.__reset_flags()
 
     def __compute_discriminator_grad(self, y_real, y_fake):
         """ Compute the loss of discriminator """
@@ -422,7 +429,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         else:
             # DCGAN
             loss_dis = F.sum(F.softplus(-y_real)) / self.rollout_n
-            loss_dis += F.sum(F.softplus(-y_fake)) / self.rollout_n
+            loss_dis += F.sum(F.softplus(y_fake)) / self.rollout_n
 
             # update statistics
             tp = (y_real.data > 0.5).sum()
@@ -437,14 +444,22 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             self.discriminator.zerograds()
             loss_dis.backward()
 
-
     def get_statistics(self):
         # returns statistics after updating and reset stat_l2_loss
+
         ret = [
             ('average_value', self.stat_average_value),
             ('average_entropy', self.stat_average_entropy),
             ('l2_loss', self.stat_l2_loss),
             ('discriminator_loss', self.stat_loss_dis),
+            ('pi_loss', self.stat_pi_loss),
+            ('v_loss', self.stat_v_loss),
+            ('R', self.stat_R),
+            ('reward_min', self.stat_reward_min),
+            ('reward_mean', self.stat_reward_mean),
+            ('reward_max', self.stat_reward_max),
+            ('reward_std', self.stat_reward_std),
+            ('loss_dis', self.stat_loss_dis)
         ]
 
         if self.use_wgangp:
@@ -457,8 +472,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                 ('discriminator_accuracy', self.stat_dis_acc)
             ]
         
-        self.stat_l2_loss = 0.0
-
+        # reset stat
+        self.__reset_stats()
+        
         return ret
 
 
