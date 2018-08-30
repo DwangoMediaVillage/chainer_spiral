@@ -48,10 +48,10 @@ def main():
     parser.add_argument('--weight_decay', type=float, default=0.0)
     parser.add_argument('--steps', type=int, default=20)
     parser.add_argument('--eval_interval', type=int, default=10)
-    parser.add_argument('--eval_n_runs', type=int, default=1)
+    parser.add_argument('--eval_n_runs', type=int, default=2)
     parser.add_argument('--load', type=str, default='')
     parser.add_argument('--demo', action='store_true', default=False)
-    parser.add_argument('--rollout_n', type=int, default=2)
+    parser.add_argument('--rollout_n', type=int, default=1)
     parser.add_argument('--profile', action='store_true')
     parser.add_argument('--gamma', type=float, default=0.9)
     parser.add_argument('--beta', type=float, default=1e-2)
@@ -61,6 +61,9 @@ def main():
     parser.add_argument('--use_wgangp', action='store_true', default=False)
     parser.add_argument('--max_episode_steps', type=int, default=10)
     args = parser.parse_args()
+
+    # dont evaluate only at the end of rollouts
+    args.eval_n_runs = args.eval_n_runs * args.rollout_n
 
     # init a logger
     logging.basicConfig(level=args.logger_level)

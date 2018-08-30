@@ -22,6 +22,7 @@ from chainerrl.recurrent import RecurrentChainMixin
 from chainerrl.recurrent import state_kept
 from chainerrl.experiments.hooks import StepHook
 
+
 import cv2
 
 
@@ -310,8 +311,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.y_fake[n] = y_fake
 
         # compute L2 loss between target data and drawn picture by the agent
-        self.stat_l2_loss += F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
-
+        l2_loss = F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
+        if n == 0:
+            self.stat_l2_loss = l2_loss
+        else:
+            self.stat_l2_loss += l2_loss
+        
         # add negative reward if the agent did not draw anything
         past_brush_prob = sum([ self.past_brush_prob[n, t] for t in range(self.timestep_limit) ])
         if not past_brush_prob:
@@ -480,9 +485,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             ret += [
                 ('discriminator_accuracy', self.stat_dis_acc)
             ]
-        
-        # reset stat
-        self.__reset_stats()
         
         return ret
 
