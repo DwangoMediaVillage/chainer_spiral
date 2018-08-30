@@ -62,9 +62,6 @@ def main():
     parser.add_argument('--max_episode_steps', type=int, default=10)
     args = parser.parse_args()
 
-    # dont evaluate only at the end of rollouts
-    args.eval_n_runs = args.eval_n_runs * args.rollout_n
-
     # init a logger
     logging.basicConfig(level=args.logger_level)
 
