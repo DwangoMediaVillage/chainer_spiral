@@ -321,7 +321,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         
         # compute reward after finishing drawing
         if self.reward_mode == 'l2':
-            R = l2_loss
+            R = 1.0 - l2_loss
         elif self.reward_mode == 'dcgan':
             y_fake = self.discriminator(self.fake_data[n])
             R = np_softplus(y_fake.data).data[0, 0]
