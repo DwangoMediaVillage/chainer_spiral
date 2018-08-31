@@ -60,8 +60,8 @@ def main():
     parser.add_argument('--empty_drawing_penalty', type=float, default=1.0)
     parser.add_argument('--use_wgangp', action='store_true', default=False)
     parser.add_argument('--max_episode_steps', type=int, default=10)
-    parser.add_argument('--save_global_step_interval', type=int, default=10,
-    parser.add_argument('--target_label', type=int, default=1))
+    parser.add_argument('--save_global_step_interval', type=int, default=10)
+    parser.add_argument('--target_label', type=int, default=1)
     args = parser.parse_args()
 
     # init a logger
