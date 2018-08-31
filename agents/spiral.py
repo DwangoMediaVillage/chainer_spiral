@@ -104,10 +104,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  gp_lambda=10.0,
                  continuous_drawing_lambda=1.0,
                  empty_drawing_penalty=1.0,
-                 use_wgangp=True,
                  pi_loss_coef=1.0,
                  v_loss_coef=1.0,
-                 lambda_R=1.0):
+                 lambda_R=1.0,
+                 reward_mode='l2'):
         
         # globally shared model
         self.shared_generator = generator
@@ -133,7 +133,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.beta = beta
 
         self.gp_lamda = gp_lambda
-        self.use_wgangp = use_wgangp
 
         self.pi_loss_coef = pi_loss_coef
         self.v_loss_coef = v_loss_coef
@@ -149,6 +148,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.average_entropy_decay = average_entropy_decay
         self.stat_average_value = 0.0
         self.stat_average_entropy = 0.0
+
+        assert reward_mode in ('l2', 'dcgan', 'wgangp')
+        self.reward_mode = reward_mode
 
         self.__reset_flags()
         self.__reset_buffers()
@@ -196,10 +198,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.stat_reward_mean = None
         self.stat_reward_std = None
         self.stat_loss_dis = None
-        if self.use_wgangp:
+
+        if self.reward_mode == 'wgangp':
             self.stat_loss_gp = None
             self.stat_dis_g = None
-        else:
+        elif self.reward_mode == 'dcgan':
             self.stat_dis_acc = None
 
     def __process_obs(self, obs):
@@ -303,26 +306,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
 
     def compute_reward(self, image):
-        # print(f" ---------- compute_reward by agent {self.process_idx} at local step {self.t}")
-
         """ compute the reward by the discriminator at the end of drawing """
-        c = self.__process_image(image)
-        y_fake = self.discriminator(c)
-
-        if not self.use_wgangp:
-            R = np_softplus(y_fake.data)
-
-        n = (self.t - 1) // self.timestep_limit
-    
-        # store reward to the buffer
-        if self.process_idx == 0:
-            logger.debug('compute final reward = %s at local_episode %s', R, n)
-
-        # sample an image from the dataset
+        # store fake data and a paired target data sampled by target data sampler
+        n = (self.t - 1) // self.timestep_limit  # number of local episode
+        self.fake_data[n] = self.__process_image(image)
         self.real_data[n] = self.target_data_sampler()
-        self.fake_data[n] = c
-        self.past_R[n] = R
-        self.y_fake[n] = y_fake
 
         # compute L2 loss between target data and drawn picture by the agent
         l2_loss = F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
@@ -331,19 +319,36 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         else:
             self.stat_l2_loss += l2_loss
         
+        # compute reward after finishing drawing
+        if self.reward_mode == 'l2':
+            R = l2_loss
+        elif self.reward_mode == 'dcgan':
+            y_fake = self.discriminator(self.fake_data[n])
+            R = np_softplus(y_fake.data).data[0, 0]
+            self.y_fake[n] = y_fake
+        elif self.reward_mode == 'wgangp':
+            y_fake = self.discriminator(self.fake_data[n])
+            R = y_fake.data[0, 0]
+            self.y_fake[n] = y_fake
+        else:
+            raise NotImplementedError()
+    
+        # store reward to the buffer
+        if self.process_idx == 0:
+            logger.debug('compute final reward = %s at local_episode %s', R, n)
+        self.past_R[n] = R
+
         # add negative reward if the agent did not draw anything
         past_brush_prob = sum([ self.past_brush_prob[n, t] for t in range(self.timestep_limit) ])
         if not past_brush_prob:
             self.past_reward[n, self.timestep_limit - 1] -= self.empty_drawing_penalty
 
     def stop_episode_and_train(self, obs, r, done=None):
-        state = self.__process_obs(obs)
-        c, _, _ = state
-        self.__update(c)
+        self.__update()
         self.__reset_buffers()
         self.__reset_flags()
 
-    def __update(self, c):
+    def __update(self):
         """ update generator and discriminator at the end of drawing """
         if self.process_idx == 0:
             logger.debug('Accumulate grads')
@@ -352,7 +357,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         v_loss = 0
 
         for n in reversed(range(self.rollout_n)):
-            R = self.lambda_R * self.past_R[n].data[0, 0]  # prob by the discriminator
+            R = self.lambda_R * self.past_R[n]  # prob by the discriminator
 
             for t in reversed(range(self.timestep_limit)):
                 R *= self.gamma  # discount factor
@@ -398,17 +403,20 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.gen_optimizer.update()
 
         # update the local discrimintor
-        y_fake = F.concat(self.y_fake.values())
-        y_real = self.discriminator(F.concat(self.real_data.values(), axis=0))
-        self.__compute_discriminator_grad(y_real, y_fake)
-        
-        # copy the gradients of the local discriminator to the globall shared model
-        self.shared_discriminator.zerograds()
-        copy_param.copy_grad(
-            target_link=self.shared_discriminator, source_link=self.discriminator)
+        if self.reward_mode in ('dcgan', 'wgangp'):
+            x_fake = F.concat(self.fake_data.values(), axis=0)
+            x_real = F.concat(self.real_data.values(), axis=0)
+            y_fake = F.concat(self.y_fake.values())
+            y_real = self.discriminator(x_real)
+            self.__compute_discriminator_grad(x_real, x_fake, y_real, y_fake)
+            
+            # copy the gradients of the local discriminator to the globall shared model
+            self.shared_discriminator.zerograds()
+            copy_param.copy_grad(
+                target_link=self.shared_discriminator, source_link=self.discriminator)
 
-        # Perform asynchronous update
-        self.dis_optimizer.update()
+            # Perform asynchronous update
+            self.dis_optimizer.update()
 
         self.sync_parameters()
         self.generator.unchain_backward()
@@ -416,7 +424,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # update statistics
         self.stat_pi_loss = float(pi_loss.data)
         self.stat_v_loss = float(v_loss.data)
-        self.stat_R = F.concat(self.past_R.values()).data.mean()
+        self.stat_R = np.array(list(self.past_R.values())).mean()
         self.stat_reward_min = self.past_reward.min()
         self.stat_reward_max = self.past_reward.max()
         self.stat_reward_mean = self.past_reward.mean()
@@ -426,9 +434,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.__reset_buffers()
         self.__reset_flags()
 
-    def __compute_discriminator_grad(self, y_real, y_fake):
+    def __compute_discriminator_grad(self, x_real, x_fake, y_real, y_fake):
         """ Compute the loss of discriminator """
-        if self.use_wgangp:
+        if self.reward_mode == 'wgangp':
             # WGAN-GP with 1 step wasserstein distance sampling
             loss_dis = F.sum(-y_real) / self.rollout_n
             loss_dis += F.sum(y_fake) / self.rollout_n
@@ -436,13 +444,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             # add gradient panalty to the loss
             eps = np.random.uniform(0, 1, size=self.rollout_n).astype(np.float32)
             eps = np.reshape(eps, (self.rollout_n, 1, 1, 1))
-            x_mid = eps * self.target_data + (1.0 - eps) * self.fake_data
-            x_mid = chainer.Variable(x_mid.data)
-            y_mid = self.discriminator(x_mid)
+            x_mid = eps * x_real + (1.0 - eps) * x_fake
+
+            x_mid_v = chainer.Variable(x_mid.data)
+            y_mid = self.discriminator(x_mid_v)
             dydx = self.discriminator.differentiable_backward(np.ones_like(y_mid.data))
             dydx = F.sqrt(F.sum(dydx ** 2, axis=(1, 2, 3)))
             loss_gp = self.gp_lamda * F.mean_squared_error(dydx, np.ones_like(dydx.data))
-            loss_dis += loss_gp
 
             # update statistics
             self.stat_loss_dis = float(loss_dis.data)
@@ -454,7 +462,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             loss_dis.backward()
             loss_gp.backward()
 
-        else:
+        elif self.reward_mode == 'dcgan':
             # DCGAN
             loss_dis = F.sum(F.softplus(-y_real)) / self.rollout_n
             loss_dis += F.sum(F.softplus(y_fake)) / self.rollout_n
@@ -471,6 +479,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             # compute grads of the local model
             self.discriminator.zerograds()
             loss_dis.backward()
+        else:
+            raise NotImplementedError()
 
     def get_statistics(self):
         # returns statistics after updating and reset stat_l2_loss
@@ -489,12 +499,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             ('reward_std', self.stat_reward_std)
         ]
 
-        if self.use_wgangp:
+        if self.reward_mode == 'wgangp':
             ret += [
                 ('discriminator_grad_panalty', self.stat_loss_gp),
                 ('discriminator_gradient_size', self.stat_dis_g)
             ]
-        else:
+        elif self.reward_mode == 'dcgan':
             ret += [
                 ('discriminator_accuracy', self.stat_dis_acc)
             ]
@@ -513,6 +523,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         with chainer.no_backprop_mode():
             state = self.__process_obs(obs)
             pout, _ = self.generator.pi_and_v(state)
+
             if self.act_deterministically:
                 x, q = [ np.argmax(p.log_p.data, axis=1)[0] for p in pout ]
             else:

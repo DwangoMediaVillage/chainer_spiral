@@ -31,6 +31,7 @@ from agents import spiral
 from spiral_evaluator import show_drawn_pictures, run_demo
 from models.spiral import SpiralDiscriminator, SPIRALSimpleModel
 from utils.arg_utils import load_args, print_args
+from utils.stat_utils import get_model_param_sum
 
 def main():
     import logging
@@ -46,24 +47,24 @@ def main():
     parser.add_argument('--lr', type=float, default=7e-4)
     parser.add_argument('--rmsprop_epsilon', type=float, default=1e-1)
     parser.add_argument('--weight_decay', type=float, default=0.0)
-    parser.add_argument('--steps', type=int, default=20)
+    parser.add_argument('--steps', type=int, default=100)
     parser.add_argument('--eval_interval', type=int, default=10)
     parser.add_argument('--eval_n_runs', type=int, default=2)
     parser.add_argument('--load', type=str, default='')
     parser.add_argument('--demo', action='store_true', default=False)
-    parser.add_argument('--rollout_n', type=int, default=1)
+    parser.add_argument('--rollout_n', type=int, default=2)
     parser.add_argument('--profile', action='store_true')
     parser.add_argument('--gamma', type=float, default=0.9)
     parser.add_argument('--beta', type=float, default=1e-2)
     parser.add_argument('--gp_lambda', type=float, default=10.0)
     parser.add_argument('--continuous_drawing_lambda', type=float, default=0.1)
     parser.add_argument('--empty_drawing_penalty', type=float, default=1.0)
-    parser.add_argument('--use_wgangp', action='store_true', default=False)
-    parser.add_argument('--max_episode_steps', type=int, default=10)
+    parser.add_argument('--max_episode_steps', type=int, default=5)
     parser.add_argument('--save_global_step_interval', type=int, default=10)
     parser.add_argument('--target_label', type=int, default=1)
     parser.add_argument('--lambda_R', type=float, default=1.0)
     parser.add_argument('--gumbel_tmp', type=float, default=0.1)
+    parser.add_argument('--reward_mode', default='l2')
     args = parser.parse_args()
 
     # init a logger
@@ -159,14 +160,16 @@ def main():
         gp_lambda=args.gp_lambda,
         continuous_drawing_lambda=args.continuous_drawing_lambda,
         empty_drawing_penalty=args.empty_drawing_penalty,
-        use_wgangp=args.use_wgangp,
-        lambda_R=args.lambda_R
+        lambda_R=args.lambda_R,
+        reward_mode=args.reward_mode
     )
 
     step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.outdir)
 
     if args.load:
+        print(f"sum of params before loading: {get_model_param_sum(agent.generator)}")
         agent.load(args.load)
+        print(f"sum of params after loading: {get_model_param_sum(agent.generator)}")
 
     if args.demo:
         env = make_env(0, True)

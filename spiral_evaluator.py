@@ -22,6 +22,10 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.animation as anim
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 def set_axis_prop(ax, title=None):
     """ set properties of axis """
     if title:
@@ -56,6 +60,7 @@ def run_single_episode(env, agent, timestep_limit):
     
     for t in range(timestep_limit):
         a = agent.act(obs)
+        logger.info('taking action %s', a)
         obs, r, done, info = env.step(a)
         obs_hist[t + 1] = obs
         act_hist[t] = a
