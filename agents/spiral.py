@@ -52,7 +52,6 @@ class SpiralStepHook(StepHook):
         if agent.t % self.timestep_limit == 0:
             agent.compute_reward(env.render(mode='rgb_array'))
             env.reset()
-            env.reset()
 
         # agent.snap is called once
         if step % self.save_global_step_interval == 0:

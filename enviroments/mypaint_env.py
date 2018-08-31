@@ -158,8 +158,10 @@ class MyPaintEnv(gym.Env):
             cr.fill()
 
         # set the pen's initial position
+        self.brush.reset()
         self.__draw(self.start_x, 0)
         self.x = self.start_x
+        
 
         # create observation: current drawn picture image and the input action
         ob = {'image': self._get_rgb_array(),
