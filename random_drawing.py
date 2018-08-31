@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     agent = RandomAgent(env.action_space)
 
-    steps = 100
+    steps = 3
 
     reward = 0
     done = False

@@ -57,6 +57,7 @@ def run_single_episode(env, agent, timestep_limit):
 
     obs = env.reset()
     obs_hist[0] = obs
+    print(obs_hist[0]['image'].mean())
     
     for t in range(timestep_limit):
         a = agent.act(obs)
@@ -65,6 +66,7 @@ def run_single_episode(env, agent, timestep_limit):
         obs_hist[t + 1] = obs
         act_hist[t] = a
     
+    env.reset()
     return obs_hist, act_hist
 
 
@@ -136,7 +138,7 @@ def run_demo(env, agent, timestep_limit, N=4, suptitle=None, savename=None):
         __obs_hist, __act_hist = run_single_episode(env, agent, timestep_limit)
         obs_hist.append(__obs_hist)
         act_hist.append(__act_hist)
-    
+
     fig = plt.figure(figsize=(7, 7))
     gs = gridspec.GridSpec(N, 3)
     
@@ -174,7 +176,7 @@ def run_demo(env, agent, timestep_limit, N=4, suptitle=None, savename=None):
             im.set_data(obs_hist[n][t]['image'])
         return ims
     
-    ani = anim.FuncAnimation(fig, frame_func, frames=range(timestep_limit), interval=100)
+    ani = anim.FuncAnimation(fig, frame_func, frames=range(0, timestep_limit + 1), interval=100)
 
     if savename:
         ani.save(savename)

@@ -51,10 +51,14 @@ class SpiralStepHook(StepHook):
         # agent.compute_reward is called for each agent
         if agent.t % self.timestep_limit == 0:
             agent.compute_reward(env.render(mode='rgb_array'))
-        
+            env.reset()
+            env.reset()
+
         # agent.snap is called once
         if step % self.save_global_step_interval == 0:
             agent.snap(step, self.outdir)
+        
+    
 
 
 def np_softplus(x):

@@ -45,6 +45,9 @@ def plot_score(args):
     steps = np.array(table['steps'])
     elapsed = np.array(table['elapsed'])
 
+    # fix ordering of the records due to a bug
+    inds = np.argsort(steps)
+
     # number of plots
     N = len(data.keys())
     n_cols = 3
@@ -58,7 +61,7 @@ def plot_score(args):
     for key, value in data.items():
         ax = plt.subplot(gs[n])
         
-        ax.plot(steps, value)
+        ax.plot(steps[inds], value[inds])
         set_axis_prop(ax, key)
 
         n += 1
