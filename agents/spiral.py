@@ -6,6 +6,7 @@ from builtins import *  # NOQA
 from future import standard_library
 standard_library.install_aliases()  # NOQA
 
+import os
 import copy
 from logging import getLogger
 
@@ -41,12 +42,19 @@ class SPIRALModel(chainer.Link, RecurrentChainMixin):
 
 class SpiralStepHook(StepHook):
     """ Ask the agent to compute reward at the current drawn picture """
-    def __init__(self, timestep_limit):
+    def __init__(self, timestep_limit, save_global_step_interval, outdir):
         self.timestep_limit = timestep_limit
+        self.save_global_step_interval = save_global_step_interval
+        self.outdir = outdir
     
     def __call__(self, env, agent, step):
+        # agent.compute_reward is called for each agent
         if agent.t % self.timestep_limit == 0:
             agent.compute_reward(env.render(mode='rgb_array'))
+        
+        # agent.snap is called once
+        if step % self.save_global_step_interval == 0:
+            agent.snap(step, self.outdir)
 
 
 def np_softplus(x):
@@ -291,6 +299,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
 
     def compute_reward(self, image):
+        # print(f" ---------- compute_reward by agent {self.process_idx} at local step {self.t}")
+
         """ compute the reward by the discriminator at the end of drawing """
         c = self.__process_image(image)
         y_fake = self.discriminator(c)
@@ -516,4 +526,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         copy_param.copy_param(target_link=self.shared_discriminator,
                                 source_link=self.discriminator)
 
-    
+
+    def snap(self, step, outdir):
+        dirname = os.path.join(outdir, '{}'.format(step))
+        self.save(dirname)
+        logger.info('Taking snapshot at global step %s to %s', step, dirname)

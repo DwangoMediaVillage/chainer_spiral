@@ -60,6 +60,7 @@ def main():
     parser.add_argument('--empty_drawing_penalty', type=float, default=1.0)
     parser.add_argument('--use_wgangp', action='store_true', default=False)
     parser.add_argument('--max_episode_steps', type=int, default=10)
+    parser.add_argument('--save_global_step_interval', type=int, default=10)
     args = parser.parse_args()
 
     # init a logger
@@ -158,7 +159,7 @@ def main():
         use_wgangp=args.use_wgangp
     )
 
-    step_hook = spiral.SpiralStepHook(timestep_limit)
+    step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.outdir)
 
     if args.load:
         agent.load(args.load)
@@ -183,7 +184,8 @@ def main():
                 eval_n_runs=args.eval_n_runs,
                 eval_interval=args.eval_interval,
                 max_episode_len=timestep_limit * args.rollout_n,
-                step_hooks=[step_hook]
+                step_hooks=[step_hook],
+                save_best_so_far_agent=False
             )
         else:
             experiments.train_agent_async(
@@ -196,7 +198,8 @@ def main():
                 eval_n_runs=args.eval_n_runs,
                 eval_interval=args.eval_interval,
                 max_episode_len=timestep_limit * args.rollout_n,
-                global_step_hooks=[step_hook]
+                global_step_hooks=[step_hook],
+                save_best_so_far_agent=False
             )
 
 
