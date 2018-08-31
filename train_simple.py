@@ -62,6 +62,7 @@ def main():
     parser.add_argument('--max_episode_steps', type=int, default=10)
     parser.add_argument('--save_global_step_interval', type=int, default=10)
     parser.add_argument('--target_label', type=int, default=1)
+    parser.add_argument('--lambda_R', type=float, default=1.0)
     args = parser.parse_args()
 
     # init a logger
@@ -157,7 +158,8 @@ def main():
         gp_lambda=args.gp_lambda,
         continuous_drawing_lambda=args.continuous_drawing_lambda,
         empty_drawing_penalty=args.empty_drawing_penalty,
-        use_wgangp=args.use_wgangp
+        use_wgangp=args.use_wgangp,
+        lambda_R=args.lambda_R
     )
 
     step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.outdir)

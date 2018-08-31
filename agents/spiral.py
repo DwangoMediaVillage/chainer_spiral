@@ -83,6 +83,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         continuous_drawing_lambda (float): scaling factor of additional reward to encourage continuous drawing
         empty_drawing_penalty (float): size of negative reward for drawing nothing
         use_wgangp (bool): If true, the discriminator is trained as WGAN-GP
+        lambda_R (float): Scaling parameter of rewards by discriminator
     """
     
     process_idx = None
@@ -105,7 +106,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  empty_drawing_penalty=1.0,
                  use_wgangp=True,
                  pi_loss_coef=1.0,
-                 v_loss_coef=1.0):
+                 v_loss_coef=1.0,
+                 lambda_R=1.0):
         
         # globally shared model
         self.shared_generator = generator
@@ -135,6 +137,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         self.pi_loss_coef = pi_loss_coef
         self.v_loss_coef = v_loss_coef
+
+        self.lambda_R = lambda_R
 
         self.continuous_drawing_lambda = continuous_drawing_lambda
         
@@ -348,7 +352,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         v_loss = 0
 
         for n in reversed(range(self.rollout_n)):
-            R = self.past_R[n].data[0, 0]  # prob by the discriminator
+            R = self.lambda_R * self.past_R[n].data[0, 0]  # prob by the discriminator
 
             for t in reversed(range(self.timestep_limit)):
                 R *= self.gamma  # discount factor
