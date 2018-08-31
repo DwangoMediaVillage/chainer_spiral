@@ -60,7 +60,8 @@ def main():
     parser.add_argument('--empty_drawing_penalty', type=float, default=1.0)
     parser.add_argument('--use_wgangp', action='store_true', default=False)
     parser.add_argument('--max_episode_steps', type=int, default=10)
-    parser.add_argument('--save_global_step_interval', type=int, default=10)
+    parser.add_argument('--save_global_step_interval', type=int, default=10,
+    parser.add_argument('--target_label', type=int, default=1))
     args = parser.parse_args()
 
     # init a logger
@@ -120,7 +121,7 @@ def main():
         dis_opt.add_hook(NonbiasWeightDecay(args.weight_decay))
 
     # target image dataset
-    def simple_class_filter(xs, simple_class=False, target_label=3):
+    def simple_class_filter(xs, simple_class=False, target_label=args.target_label):
         if not simple_class:
             # return only data
             return [ x[0] for x in xs ]
