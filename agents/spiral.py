@@ -482,8 +482,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             ('reward_min', self.stat_reward_min),
             ('reward_mean', self.stat_reward_mean),
             ('reward_max', self.stat_reward_max),
-            ('reward_std', self.stat_reward_std),
-            ('loss_dis', self.stat_loss_dis)
+            ('reward_std', self.stat_reward_std)
         ]
 
         if self.use_wgangp:
