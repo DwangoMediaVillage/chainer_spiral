@@ -63,6 +63,7 @@ def main():
     parser.add_argument('--save_global_step_interval', type=int, default=10)
     parser.add_argument('--target_label', type=int, default=1)
     parser.add_argument('--lambda_R', type=float, default=1.0)
+    parser.add_argument('--gumbel_tmp', type=float, default=0.1)
     args = parser.parse_args()
 
     # init a logger
@@ -104,7 +105,7 @@ def main():
 
     in_channel = 1
 
-    gen = SPIRALSimpleModel(obs_space, action_space, in_channel)  # generator
+    gen = SPIRALSimpleModel(obs_space, action_space, in_channel, args.gumbel_tmp)  # generator
     dis = SpiralDiscriminator(in_channel)  # discriminator
 
     gen_opt = rmsprop_async.RMSpropAsync(

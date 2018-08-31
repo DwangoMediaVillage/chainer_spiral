@@ -48,12 +48,14 @@ def bw_leaky_relu(x_in, x, a):
 
 class SpiralPi(chainer.Chain):
     """ CNN-LSTM with Autoregressive decodoer. """
-    def __init__(self, obs_spaces, action_spaces, in_channel=3):
+    def __init__(self, obs_spaces, action_spaces, in_channel=3, gumbel_tmp=0.1):
         self.in_channel = in_channel
         self.obs_pos_dim = obs_spaces.spaces['position'].n
         self.obs_q_dim = obs_spaces.spaces['prob'].n
         self.act_pos_dim = action_spaces.spaces['position'].n
         self.act_q_dim = action_spaces.spaces['prob'].n
+
+        self.gumbel_tmp = gumbel_tmp
 
         super().__init__()
         with self.init_scope():
@@ -112,7 +114,7 @@ class SpiralPi(chainer.Chain):
         a1 = D.Categorical(logit=h_z1)
 
         # simple sampling is not differentiable
-        h_z1 = F.relu(self.z1_linear1(gumbel_softmax_sampling(a1)))
+        h_z1 = F.relu(self.z1_linear1(gumbel_softmax_sampling(a1, self.gumbel_tmp)))
 
         z2 = F.relu(self.z1_linear2(F.concat((h_z1, z1), axis=1)))
         h_z2 = F.relu(self.z2_linear(z2))
@@ -214,10 +216,10 @@ class SpiralDiscriminator(chainer.Chain):
 
 class SPIRALSimpleModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixin):
     """ A simple model """
-    def __init__(self, obs_spaces, action_spaces, in_channel=3):
+    def __init__(self, obs_spaces, action_spaces, in_channel=3, gumbel_tmp=0.1):
         
         # define policy and value networks
-        self.pi = SpiralPi(obs_spaces, action_spaces, in_channel)
+        self.pi = SpiralPi(obs_spaces, action_spaces, in_channel, gumbel_tmp)
         self.v = SpiralValue(obs_spaces, in_channel)
 
         super().__init__(self.pi, self.v)
