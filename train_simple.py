@@ -26,12 +26,14 @@ from chainerrl import misc
 from chainerrl.optimizers.nonbias_weight_decay import NonbiasWeightDecay
 from chainerrl.optimizers import rmsprop_async
 
-from enviroments import MyPaintEnv
+from environments import MyPaintEnv
 from agents import spiral
 from spiral_evaluator import show_drawn_pictures, run_demo
 from models.spiral import SpiralDiscriminator, SPIRALSimpleModel
 from utils.arg_utils import load_args, print_args
 from utils.stat_utils import get_model_param_sum
+from utils.data_utils import get_mnist
+
 
 def main():
     import logging
@@ -90,11 +92,7 @@ def main():
 
     # define func to create env
     def make_env(process_idx, test):
-        env = MyPaintEnv(max_episode_steps=args.max_episode_steps)
-
-        # TODO: implement test mode
-        # TODO: implement reward filter?
-        
+        env = MyPaintEnv(max_episode_steps=args.max_episode_steps)  
         return env
 
     sample_env = MyPaintEnv(max_episode_steps=args.max_episode_steps)
@@ -124,27 +122,7 @@ def main():
         dis_opt.add_hook(NonbiasWeightDecay(args.weight_decay))
 
     # target image dataset
-    def simple_class_filter(xs, simple_class=False, target_label=args.target_label):
-        if not simple_class:
-            # return only data
-            return [ x[0] for x in xs ]
-        
-        # filtering by label
-        indices = [ i for i, x in enumerate(xs) if x[1] == target_label ]
-        return [ xs[i][0] for i in indices ]
-
-    train, _ = chainer.datasets.get_mnist(withlabel=True)
-    train = simple_class_filter(train, simple_class=True)
-    train_iter = chainer.iterators.SerialIterator(train, 1)  # batchsize is 1
-
-    def target_data_sampler():
-        """ sample a mnist image """
-        y = train_iter.next()[0].data
-        y = np.reshape(y, (28, 28))
-        y = cv2.resize(y, (sample_env.imsize, sample_env.imsize))
-        y = np.reshape(y, (1, 1, sample_env.imsize, sample_env.imsize))
-        y = 1.0 - y  # background: black -> white
-        return chainer.Variable(y)
+    train, target_data_sampler = get_mnist(sample_env.imsize, single_class=True, target_label=args.target_label)
 
     agent = spiral.SPIRAL(
         generator=gen,

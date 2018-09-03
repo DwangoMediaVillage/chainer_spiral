@@ -208,7 +208,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         elif self.reward_mode == 'dcgan':
             self.stat_dis_acc = None
 
-    def __process_obs(self, obs):
+    def process_obs(self, obs):
         c = obs['image']
         x = obs['position']
         q = obs['prob']
@@ -237,7 +237,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         image = np.expand_dims(image, 0)
         return  image
     
-    def __pack_action(self, x, q):
+    def pack_action(self, x, q):
         return {'position': x,
                 'pressure': 1.0,
                 'color': (0.0, 0.0, 0.0),
@@ -256,7 +256,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         """ Infer action from the observation at each step """
 
         # parse observation
-        state = self.__process_obs(obs)
+        state = self.process_obs(obs)
 
         # infer by the current policy
         pout, vout = self.generator.pi_and_v(state)
@@ -300,7 +300,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             (float(entropy.data) - self.stat_average_entropy))
         
         # create action dictionary to the env
-        action = self.__pack_action(x, q)
+        action = self.pack_action(x, q)
 
         # update counters
         self.t += 1
@@ -405,7 +405,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             logger.debug('grad_norm of generator: %s', norm)
         self.gen_optimizer.update()
 
-        # update the local discrimintor
+        # update the local discriminator
         if self.reward_mode in ('dcgan', 'wgangp'):
             x_fake = F.concat(self.fake_data.values(), axis=0)
             x_real = F.concat(self.real_data.values(), axis=0)
@@ -524,7 +524,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
     def act(self, obs):
         with chainer.no_backprop_mode():
-            state = self.__process_obs(obs)
+            state = self.process_obs(obs)
             pout, _ = self.generator.pi_and_v(state)
 
             if self.act_deterministically:
@@ -532,7 +532,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             else:
                 x, q = [ p.sample().data[0] for p in pout ]
             
-            return self.__pack_action(x, q)
+            return self.pack_action(x, q)
 
 
     def load(self, dirname):

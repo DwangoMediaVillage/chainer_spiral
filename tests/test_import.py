@@ -14,7 +14,7 @@ def test_import_chainerrl():
 
 def test_import_spiral():
     # try to import spiral env
-    from enviroments import MyPaintEnv
+    from environments import MyPaintEnv
 
     # try to import spiral agent
     from agents.spiral import SPIRALModel, SPIRAL

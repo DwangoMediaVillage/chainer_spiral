@@ -44,12 +44,16 @@ def plot_score(args):
 
     elapsed = np.array(table['elapsed'])[inds]
 
+    if steps[-1] > 1000:
+        elapsed_min = elapsed[-1] / steps[-1] * 1000
+        elapsed_min = elapsed_min / 60 
+        print(f" elapsed per 1k steps [min] = {elapsed_min}")
+
     cut_idx = None
 
     data = {}
     for col in table.columns:
         if not col in EXCEPT_TAGS:
-            print(col)
             data[col] = np.array(table[col])[inds]
             is_nan_idx = np.where(np.isnan(data[col]))[0]
             if len(is_nan_idx) and is_nan_idx.min() > 0:

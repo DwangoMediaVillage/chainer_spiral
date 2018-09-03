@@ -54,14 +54,17 @@ def show_drawn_pictures(env, agent, timestep_limit):
 def run_single_episode(env, agent, timestep_limit):
     obs_hist = {}
     act_hist = {}
-
     obs = env.reset()
     obs_hist[0] = obs
     print(obs_hist[0]['image'].mean())
     
     for t in range(timestep_limit):
-        a = agent.act(obs)
-        logger.info('taking action %s', a)
+        state = agent.process_obs(obs)
+        pout, _ = agent.generator.pi_and_v(state)
+
+        x, q = [ p.sample().data[0] for p in pout ]
+        a = agent.pack_action(x, q)
+        logger.info('taking action %s argmax of prob-x %s, prob of q %s', a, np.argmax(pout[0].p.data), pout[1].p.data)
         obs, r, done, info = env.step(a)
         obs_hist[t + 1] = obs
         act_hist[t] = a

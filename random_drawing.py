@@ -8,7 +8,10 @@ class RandomAgent(object):
         self.action_space = action_space
     
     def act(self, observation, reward, done):
-        return self.action_space.sample()
+        a = self.action_space.sample()
+        a['color'] = (0, 0, 0)
+        print(f"taking action {a}")
+        return a
 
     
 if __name__ == '__main__':
@@ -17,7 +20,7 @@ if __name__ == '__main__':
 
     agent = RandomAgent(env.action_space)
 
-    steps = 3
+    steps = 2
 
     reward = 0
     done = False
@@ -25,6 +28,8 @@ if __name__ == '__main__':
 
     for t in range(steps):
         action = agent.act(ob, reward, done)
+        if t == 0:
+            action['prob'] = 0
         ob, reward, done, _ = env.step(action)
 
     env.close()

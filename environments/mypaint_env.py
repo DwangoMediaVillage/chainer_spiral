@@ -9,6 +9,7 @@ import numpy as np
 
 import logging
 import time
+import math
 
 class MyPaintEnv(gym.Env):
     action_space = None
@@ -118,11 +119,10 @@ class MyPaintEnv(gym.Env):
 
     def convert_x(self, x):
         """ convert position id -> a point (p1, p2) """
-        p1 = (x % self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
-        p2 = (x // self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
-        # print(f"p1: {int(p1) - self.tile_offset}, p2: {int(p2) - self.tile_offset}")
-
-        return p1, p2
+        assert x < self.pos_resolution ** 2
+        p1 = (x % self.pos_resolution) / (self.pos_resolution - 1) * self.imsize + self.tile_offset
+        p2 = (x // self.pos_resolution) / (self.pos_resolution - 1) * self.imsize + self.tile_offset
+        return int(p1), int(p2)
 
     def __draw(self, x, pressure, xtilt=0, ytilt=0, dtime=0.1, viewzoom=1.0, viewrotation=0.0):
         p1, p2 = self.convert_x(x)
@@ -217,10 +217,20 @@ if __name__ == '__main__':
     env = MyPaintEnv(logger=logger)
 
     # drawing something
-    env.step({'position': (1.0, 1.0), 'pressure': 1.0, 'color': (1, 0, 0), 'prob': 1})
+    env.step({'position': 32 * 3 + 16, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 0})
+    env.step({'position': 32 * 30 + 16, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 1})
 
-    while True:
-        env.render()
-        time.sleep(1)
-    
+    env.reset()
+
+    env.step({'position': 32 * 3 + 16, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 0})
+    env.step({'position': 32 * 30 + 16, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 1})
+
+    import matplotlib
+    matplotlib.use('MacOSX')
+    import matplotlib.pyplot as plt
+
+    obs = env.render('rgb_array')
+    plt.imshow(obs)
+    plt.show()
+
     env.close()

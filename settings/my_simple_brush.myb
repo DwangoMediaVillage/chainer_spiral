@@ -179,8 +179,19 @@
             "inputs": {}
         }, 
         "radius_logarithmic": {
-            "base_value": -0.18, 
-            "inputs": {}
+            "base_value": 1.3, 
+            "inputs": {
+                "speed1": [
+                    [
+                        0.0, 
+                        -0.0
+                    ], 
+                    [
+                        4.0, 
+                        0.0
+                    ]
+                ]
+            }
         }, 
         "restore_color": {
             "base_value": 0.0, 
