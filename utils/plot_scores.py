@@ -34,7 +34,7 @@ def plot_score(args):
 
     assert os.path.exists(target)
 
-    table = pandas.read_table(target)
+    table = pandas.read_table(target, dtype=np.float32, na_values='None')
 
     steps = np.array(table['steps'])
 
@@ -49,11 +49,10 @@ def plot_score(args):
     data = {}
     for col in table.columns:
         if not col in EXCEPT_TAGS:
+            print(col)
             data[col] = np.array(table[col])[inds]
-
             is_nan_idx = np.where(np.isnan(data[col]))[0]
-
-            if len(is_nan_idx):
+            if len(is_nan_idx) and is_nan_idx.min() > 0:
                 cut_idx = is_nan_idx.min()
     
     if cut_idx:
