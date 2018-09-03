@@ -22,9 +22,9 @@ EXCEPT_TAGS = ('steps',
                 'max',
                 'min')
 
-def set_axis_prop(ax, title):
+def set_axis_prop(ax, title, x_label):
     ax.set_title(title)
-    ax.set_xlabel('step')
+    ax.set_xlabel(x_label)
     ax.grid()
 
 def plot_score(args):
@@ -36,17 +36,36 @@ def plot_score(args):
 
     table = pandas.read_table(target)
 
-    data = {}
-
-    for col in table.columns:
-        if not col in EXCEPT_TAGS:
-            data[col] = np.array(table[col])
-
     steps = np.array(table['steps'])
-    elapsed = np.array(table['elapsed'])
 
     # fix ordering of the records due to a bug
     inds = np.argsort(steps)
+    steps = steps[inds]
+
+    elapsed = np.array(table['elapsed'])[inds]
+
+    cut_idx = None
+
+    data = {}
+    for col in table.columns:
+        if not col in EXCEPT_TAGS:
+            data[col] = np.array(table[col])[inds]
+
+            is_nan_idx = np.where(np.isnan(data[col]))[0]
+
+            if len(is_nan_idx):
+                cut_idx = is_nan_idx.min()
+    
+    if cut_idx:
+        steps = steps[:cut_idx]
+        elapsed = steps[:cut_idx]
+
+    # fix order
+    if steps.max() > 100000:
+        steps = steps / 1000
+        x_label = 'Step [k]'
+    else:
+        x_label = 'Step'
 
     # number of plots
     N = len(data.keys())
@@ -60,10 +79,13 @@ def plot_score(args):
     n = 0
     for key, value in data.items():
         ax = plt.subplot(gs[n])
-        
-        ax.plot(steps[inds], value[inds])
-        set_axis_prop(ax, key)
 
+        scalar = value[inds]
+        if cut_idx:
+            scalar = value[inds][:cut_idx]
+        ax.plot(steps, scalar)
+        set_axis_prop(ax, key, x_label)
+        ax.set_xlim(0, steps.max())
         n += 1
 
     # plt.suptitle(target)
