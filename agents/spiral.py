@@ -144,7 +144,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         self.continuous_drawing_lambda = continuous_drawing_lambda
         
-        assert empty_drawing_penalty > 0
+        assert empty_drawing_penalty >= 0
         self.empty_drawing_penalty = empty_drawing_penalty
 
         self.average_value_decay = average_value_decay
