@@ -217,7 +217,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         c = self.__process_image(c)
 
         # position
-        x = np.asarray(x, dtype=np.float32)
+        x /= float(self.generator.pi.obs_pos_dim)
+        x = np.asarray(x, dtype=np.float32) 
         x = np.reshape(x, (1, 1))
 
         # prob
@@ -346,11 +347,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         if not past_brush_prob:
             self.past_reward[n, self.timestep_limit - 1] -= self.empty_drawing_penalty
 
+        self.generator.reset_state()
+
     def stop_episode_and_train(self, obs, r, done=None):
         self.__update()
         self.__reset_buffers()
         self.__reset_flags()
-
+        
     def __update(self):
         """ update generator and discriminator at the end of drawing """
         if self.process_idx == 0:
