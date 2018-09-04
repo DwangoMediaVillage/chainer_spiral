@@ -57,6 +57,12 @@ class SpiralPi(chainer.Chain):
 
         self.gumbel_tmp = gumbel_tmp
 
+        # activation func for encoding part
+        self.f_enc = F.relu
+
+        # activation func for decoding part
+        self.f_dec = F.sigmoid
+
         super().__init__()
         with self.init_scope():
             self.conv1 = L.Convolution2D(self.in_channel, 32, ksize=5)
@@ -83,22 +89,22 @@ class SpiralPi(chainer.Chain):
         # a has position (a1) and prob (a2)
         c, a1, a2 = obs
         
-        h_a1 = F.relu(self.linear_a1(a1))
-        h_a2 = F.relu(self.linear_a2(a2))
+        h_a1 = self.f_enc(self.linear_a1(a1))
+        h_a2 = self.f_enc(self.linear_a2(a2))
         h_a = F.concat((h_a1, h_a2), axis=1)
-        h = F.relu(self.conv1(c))
+        h = self.f_enc(self.conv1(c))
 
         # repeat h_a and adds to feature from the conv
         imshape = h.shape[2:]
         h = h + F.reshape(F.tile(h_a, imshape), (1, 32) + imshape)
         
-        h = F.relu(self.conv2(h))
-        h = F.relu(self.conv3(h))
-        h = F.relu(self.conv4(h))
+        h = self.f_enc(self.conv2(h))
+        h = self.f_enc(self.conv3(h))
+        h = self.f_enc(self.conv4(h))
 
         # TODO: insert ResBlock 3x3
         h = F.expand_dims(F.flatten(h), 0)
-        h = F.relu(self.linear_2(h))
+        h = self.f_enc(self.linear_2(h))
 
         h = self.lstm(h)
 
@@ -107,17 +113,16 @@ class SpiralPi(chainer.Chain):
 
         # location
         h_z1 = F.reshape(z1, (1, 16, 4, 4))
-        h_z1 = F.relu(self.z1_conv1(h_z1))
-        h_z1 = F.relu(self.z1_conv2(h_z1))
-        h_z1 = F.relu(self.z1_conv3(h_z1))
+        h_z1 = self.f_dec(self.z1_conv1(h_z1))
+        h_z1 = self.f_dec(self.z1_conv2(h_z1))
+        h_z1 = self.f_dec(self.z1_conv3(h_z1))
         h_z1 = F.reshape(h_z1, (1, self.act_pos_dim))
         a1 = D.Categorical(logit=h_z1)
 
         # simple sampling is not differentiable
-        h_z1 = F.relu(self.z1_linear1(gumbel_softmax_sampling(a1, self.gumbel_tmp)))
-
-        z2 = F.relu(self.z1_linear2(F.concat((h_z1, z1), axis=1)))
-        h_z2 = F.relu(self.z2_linear(z2))
+        h_z1 = self.f_dec(self.z1_linear1(gumbel_softmax_sampling(a1, self.gumbel_tmp)))
+        z2 = self.f_dec(self.z1_linear2(F.concat((h_z1, z1), axis=1)))
+        h_z2 = self.f_dec(self.z2_linear(z2))
         a2 = D.Categorical(logit=h_z2)
 
         return a1, a2
@@ -169,7 +174,7 @@ class SpiralValue(chainer.Chain):
 
         h = self.lstm(h)
 
-        v = F.relu(self.linear_out(h))
+        v = self.linear_out(h)
         return v
 
 class SpiralDiscriminator(chainer.Chain):
