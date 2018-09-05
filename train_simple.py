@@ -66,7 +66,7 @@ def main():
     parser.add_argument('--lambda_R', type=float, default=1.0)
     parser.add_argument('--gumbel_tmp', type=float, default=0.1)
     parser.add_argument('--reward_mode', default='l2')
-    parser.add_argument('--save_final_obs_interval', type=int, default=10)
+    parser.add_argument('--save_final_obs_update_interval', type=int, default=10)
     args = parser.parse_args()
 
     # init a logger
@@ -139,10 +139,12 @@ def main():
         continuous_drawing_lambda=args.continuous_drawing_lambda,
         empty_drawing_penalty=args.empty_drawing_penalty,
         lambda_R=args.lambda_R,
-        reward_mode=args.reward_mode
+        reward_mode=args.reward_mode,
+        save_final_obs_update_interval=args.save_final_obs_update_interval,
+        outdir=args.outdir
     )
 
-    step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.save_final_obs_interval, args.outdir)
+    step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.outdir)
 
     if args.load:
         print(f"sum of params before loading: {get_model_param_sum(agent.generator)}")
@@ -151,7 +153,7 @@ def main():
 
     if args.demo:
         from spiral_evaluator import show_drawn_pictures, run_demo
-        
+
         env = make_env(0, True)
         if args.load:
             savename = os.path.join(args.load, 'result.mp4')

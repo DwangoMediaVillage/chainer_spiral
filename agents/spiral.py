@@ -44,15 +44,10 @@ class SPIRALModel(chainer.Link, RecurrentChainMixin):
 
 class SpiralStepHook(StepHook):
     """ Ask the agent to compute reward at the current drawn picture """
-    def __init__(self, timestep_limit, save_global_step_interval, save_final_obs_interval, outdir):
+    def __init__(self, timestep_limit, save_global_step_interval, outdir):
         self.timestep_limit = timestep_limit
         self.save_global_step_interval = save_global_step_interval
-        self.save_final_obs_interval = save_final_obs_interval
         self.outdir = outdir
-    
-        self.outdir_final_obs = os.path.join(self.outdir, 'final_obs')  # directory to save the final observation
-        if not os.path.exists(self.outdir_final_obs):
-            os.mkdir(self.outdir_final_obs)
 
     def __call__(self, env, agent, step):
         # agent.compute_reward is called for each agent
@@ -60,15 +55,11 @@ class SpiralStepHook(StepHook):
             agent.compute_reward(env.render(mode='rgb_array'))
             env.reset()
 
-            if step % self.save_final_obs_interval == 0:
-                agent.save_final_obs(step, self.outdir_final_obs)
-
         # agent.snap is called once
         if step % self.save_global_step_interval == 0:
             agent.snap(step, self.outdir)
-        
 
-
+          
 def np_softplus(x):
     return np.maximum(0, x) + np.log(1 + np.exp(-np.abs(-x)))
 
@@ -138,7 +129,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  pi_loss_coef=1.0,
                  v_loss_coef=1.0,
                  lambda_R=1.0,
-                 reward_mode='l2'):
+                 reward_mode='l2',
+                 save_final_obs_update_interval=10000,
+                 outdir=None):
         
         # globally shared model
         self.shared_generator = generator
@@ -189,6 +182,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # initialize drawer to save the final observation
         self.image_drawer = ImageDrawer(self.rollout_n)
+        self.save_final_obs_update_interval = save_final_obs_update_interval
+        self.outdir_final_obs = os.path.join(outdir, 'final_obs')  # directory to save the final observation
+        if not os.path.exists(self.outdir_final_obs):
+            os.mkdir(self.outdir_final_obs)
 
 
     def sync_parameters(self):
@@ -238,6 +235,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             self.stat_dis_g = None
         elif self.reward_mode == 'dcgan':
             self.stat_dis_acc = None
+
+        self.update_n = 0   # number of updates
 
     def process_obs(self, obs):
         c = obs['image']
@@ -381,6 +380,14 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
     def stop_episode_and_train(self, obs, r, done=None):
         self.__update()
+
+        # saving the final observation images as png
+        if self.process_idx ==0 and self.update_n % self.save_final_obs_update_interval == 0:
+            figname = "obs_update_{}.png".format(self.update_n)
+            figname = os.path.join(self.outdir_final_obs, figname)
+            logger.debug('Saving final observation as %s', figname)
+            self.image_drawer.draw_and_save(self.fake_data, figname)
+
         self.__reset_buffers()
         self.__reset_flags()
         
@@ -466,9 +473,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.stat_reward_mean = self.past_reward.mean()
         self.stat_reward_std = self.past_reward.std()
 
-        # reset
-        self.__reset_buffers()
-        self.__reset_flags()
+        # update counter
+        self.update_n += 1
 
     def __compute_discriminator_grad(self, x_real, x_fake, y_real, y_fake):
         """ Compute the loss of discriminator """
@@ -580,10 +586,4 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.save(dirname)
         logger.info('Taking snapshot at global step %s to %s', step, dirname)
 
-
-    def save_final_obs(self, step, outdir):
-        """ save final observation to outdir """
-        figname = "obs_step_{}.png".format(step)
-        figname = os.path.join(outdir, figname)
-        self.image_drawer.draw_and_save(self.fake_data, figname)
 
