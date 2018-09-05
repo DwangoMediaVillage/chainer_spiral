@@ -583,8 +583,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
     def save_final_obs(self, step, outdir):
         """ save final observation to outdir """
-        if self.process_idx == 0:
-            figname = "obs_step_{}.png".format(step)
-            figname = os.path.join(outdir, figname)
-            self.image_drawer.draw_and_save(self.fake_data, figname)
+        figname = "obs_step_{}.png".format(step)
+        figname = os.path.join(outdir, figname)
+        self.image_drawer.draw_and_save(self.fake_data, figname)
 
