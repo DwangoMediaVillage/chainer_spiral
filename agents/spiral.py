@@ -57,7 +57,6 @@ class SpiralStepHook(StepHook):
         if step % self.save_global_step_interval == 0:
             agent.snap(step, self.outdir)
         
-    
 
 
 def np_softplus(x):
@@ -285,6 +284,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             self.past_reward[n, t] = continuous_reward
         
         entropy = sum([ F.sum(p.entropy) for p in pout ])
+
         self.past_action_entropy[n, t] = entropy
 
         log_prob = sum([ p.log_prob(a) for p, a in zip(pout, (x, q)) ])
@@ -325,7 +325,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         
         # compute reward after finishing drawing
         if self.reward_mode == 'l2':
-            R = 1.0 - l2_loss
+            R = l2_loss * -1.0
         elif self.reward_mode == 'dcgan':
             y_fake = self.discriminator(self.fake_data[n])
             R = np_softplus(y_fake.data).data[0, 0]
@@ -444,8 +444,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         """ Compute the loss of discriminator """
         if self.reward_mode == 'wgangp':
             # WGAN-GP with 1 step wasserstein distance sampling
-            loss_dis = F.sum(-y_real) / self.rollout_n
-            loss_dis += F.sum(y_fake) / self.rollout_n
+            loss_dis = -F.sum(y_real) / self.rollout_n + F.sum(y_fake) / self.rollout_n
 
             # add gradient panalty to the loss
             eps = np.random.uniform(0, 1, size=self.rollout_n).astype(np.float32)
@@ -470,8 +469,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         elif self.reward_mode == 'dcgan':
             # DCGAN
-            loss_dis = F.sum(F.softplus(-y_real)) / self.rollout_n
-            loss_dis += F.sum(F.softplus(y_fake)) / self.rollout_n
+            loss_dis = -F.sum(y_real) / self.rollout_n + F.sum(y_fake) / self.rollout_n
 
             # update statistics
             tp = (y_real.data > 0.5).sum()

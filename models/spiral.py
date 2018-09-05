@@ -78,7 +78,7 @@ class SpiralPi(chainer.Chain):
             self.z1_conv1 = L.Deconvolution2D(16, 8, stride=2, ksize=4, pad=1)
             self.z1_conv2 = L.Deconvolution2D(8, 4, stride=2, ksize=4, pad=1)
             self.z1_conv3 = L.Deconvolution2D(4, 1, stride=2, ksize=4, pad=1)
-            self.z1_linear1 = L.Linear(self.act_pos_dim, out_size=16)
+            self.z1_linear1 = L.Linear(1, out_size=16)
             self.z1_linear2 = L.Linear(256+16, out_size=256)
             self.z2_linear = L.Linear(256, self.act_q_dim)
 
@@ -120,13 +120,16 @@ class SpiralPi(chainer.Chain):
         a1 = D.Categorical(logit=h_z1)
 
         # simple sampling is not differentiable
-        h_z1 = self.f_dec(self.z1_linear1(gumbel_softmax_sampling(a1, self.gumbel_tmp)))
+        a1_sample = a1.sample(1).data.astype(np.float32)
+        h_z1 = self.f_dec(self.z1_linear1(a1_sample))
+
         z2 = self.f_dec(self.z1_linear2(F.concat((h_z1, z1), axis=1)))
         h_z2 = self.f_dec(self.z2_linear(z2))
         a2 = D.Categorical(logit=h_z2)
 
         return a1, a2
 
+        
 
 class SpiralValue(chainer.Chain):
     """ CNN-LSTM V function """
