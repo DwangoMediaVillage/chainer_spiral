@@ -535,7 +535,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             ('reward_min', self.stat_reward_min),
             ('reward_mean', self.stat_reward_mean),
             ('reward_max', self.stat_reward_max),
-            ('reward_std', self.stat_reward_std)
+            ('reward_std', self.stat_reward_std),
+            ('update_n', self.update_n)
         ]
 
         if self.reward_mode == 'wgangp':
