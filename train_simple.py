@@ -28,7 +28,6 @@ from chainerrl.optimizers import rmsprop_async
 
 from environments import MyPaintEnv
 from agents import spiral
-from spiral_evaluator import show_drawn_pictures, run_demo
 from models.spiral import SpiralDiscriminator, SPIRALSimpleModel
 from utils.arg_utils import load_args, print_args
 from utils.stat_utils import get_model_param_sum
@@ -67,6 +66,7 @@ def main():
     parser.add_argument('--lambda_R', type=float, default=1.0)
     parser.add_argument('--gumbel_tmp', type=float, default=0.1)
     parser.add_argument('--reward_mode', default='l2')
+    parser.add_argument('--save_final_obs_interval', type=int, default=10)
     args = parser.parse_args()
 
     # init a logger
@@ -142,7 +142,7 @@ def main():
         reward_mode=args.reward_mode
     )
 
-    step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.outdir)
+    step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.save_final_obs_interval, args.outdir)
 
     if args.load:
         print(f"sum of params before loading: {get_model_param_sum(agent.generator)}")
@@ -150,6 +150,8 @@ def main():
         print(f"sum of params after loading: {get_model_param_sum(agent.generator)}")
 
     if args.demo:
+        from spiral_evaluator import show_drawn_pictures, run_demo
+        
         env = make_env(0, True)
         if args.load:
             savename = os.path.join(args.load, 'result.mp4')

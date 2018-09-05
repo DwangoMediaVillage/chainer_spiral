@@ -23,9 +23,11 @@ from chainerrl.recurrent import RecurrentChainMixin
 from chainerrl.recurrent import state_kept
 from chainerrl.experiments.hooks import StepHook
 
-
 import cv2
 
+import matplotlib; matplotlib.use('Cairo')
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 logger = getLogger(__name__)
 
@@ -42,16 +44,24 @@ class SPIRALModel(chainer.Link, RecurrentChainMixin):
 
 class SpiralStepHook(StepHook):
     """ Ask the agent to compute reward at the current drawn picture """
-    def __init__(self, timestep_limit, save_global_step_interval, outdir):
+    def __init__(self, timestep_limit, save_global_step_interval, save_final_obs_interval, outdir):
         self.timestep_limit = timestep_limit
         self.save_global_step_interval = save_global_step_interval
+        self.save_final_obs_interval = save_final_obs_interval
         self.outdir = outdir
     
+        self.outdir_final_obs = os.path.join(self.outdir, 'final_obs')  # directory to save the final observation
+        if not os.path.exists(self.outdir_final_obs):
+            os.mkdir(self.outdir_final_obs)
+
     def __call__(self, env, agent, step):
         # agent.compute_reward is called for each agent
         if agent.t % self.timestep_limit == 0:
             agent.compute_reward(env.render(mode='rgb_array'))
             env.reset()
+
+            if agent.process_idx == 0 and step % self.save_final_obs_interval == 0:
+                agent.save_final_obs(step, self.outdir_final_obs)
 
         # agent.snap is called once
         if step % self.save_global_step_interval == 0:
@@ -61,6 +71,25 @@ class SpiralStepHook(StepHook):
 
 def np_softplus(x):
     return np.maximum(0, x) + np.log(1 + np.exp(-np.abs(-x)))
+
+
+class ImageDrawer(object):
+    def __init__(self, n, imsize=64):
+        self.fig = plt.figure(figsize=(7, 7))
+        gs = gridspec.GridSpec(n, 1)
+        self.ims = []
+        for i in range(n):
+            ax = plt.subplot(gs[i, 0])
+            im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            self.ims.append(im)
+    
+
+    def draw_and_save(self, imgs, figname):
+        for i, im in enumerate(self.ims):
+            im.set_data(imgs[i][0, 0])
+        plt.savefig(figname)
 
 
 class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
@@ -157,6 +186,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.__reset_flags()
         self.__reset_buffers()
         self.__reset_stats()
+
+        # initialize drawer to save the final observation
+        self.image_drawer = ImageDrawer(self.rollout_n)
 
 
     def sync_parameters(self):
@@ -546,3 +578,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         dirname = os.path.join(outdir, '{}'.format(step))
         self.save(dirname)
         logger.info('Taking snapshot at global step %s to %s', step, dirname)
+
+
+    def save_final_obs(self, step, outdir):
+        """ save final observation to outdir """
+        figname = "obs_step_{}.png".format(step)
+        figname = os.path.join(outdir, figname)
+        self.image_drawer.draw_and_save(self.fake_data, figname)

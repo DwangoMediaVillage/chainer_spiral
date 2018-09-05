@@ -10,13 +10,7 @@ import numpy as np
 
 # TODO (enhancement): Support Windows
 import matplotlib
-
-import platform
-
-if 'Darwin' in platform.platform():
-    matplotlib.use('MacOSX')
-else:
-    matplotlib.use('Cairo')
+matplotlib.use('Cairo')
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
