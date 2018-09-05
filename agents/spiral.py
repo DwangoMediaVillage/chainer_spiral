@@ -505,7 +505,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         elif self.reward_mode == 'dcgan':
             # DCGAN
-            loss_dis = -F.sum(y_real) / self.rollout_n + F.sum(y_fake) / self.rollout_n
+            loss_dis = F.sum(F.softplus(-y_real)) / self.rollout_n + F.sum(F.softplus(y_fake)) / self.rollout_n
 
             # update statistics
             tp = (y_real.data > 0.5).sum()
