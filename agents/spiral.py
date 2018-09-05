@@ -259,10 +259,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         state = self.process_obs(obs)
 
         # infer by the current policy
+        # a1 is position, a2 is the prob to draw line or not
         pout, vout = self.generator.pi_and_v(state)
-
-        # Sample actions as scalar values
-        x, q = [ p.sample().data[0] for p in pout ]
+        p1, p2, a1, a2 = pout
 
         # get local time step at each episode
         n, t = self.__get_local_time()
@@ -272,22 +271,21 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # calc additional reward during drawing process
         if t > 0:
-            if float(self.past_brush_prob[n, t - 1]) and float(q):
+            if self.past_brush_prob[n, t - 1] and a2:
                 self.continuous_drawing_step += 1
             else:
                 self.continuous_drawing_step = 0
 
-        self.past_brush_prob[n, t] = q
+        self.past_brush_prob[n, t] = a2
 
         if self.continuous_drawing_step > 0:
             continuous_reward = self.continuous_drawing_lambda * 1.0 / self.continuous_drawing_step
             self.past_reward[n, t] = continuous_reward
         
-        entropy = sum([ F.sum(p.entropy) for p in pout ])
-
+        entropy = sum([ p.entropy for p in (p1, p2) ])
         self.past_action_entropy[n, t] = entropy
 
-        log_prob = sum([ p.log_prob(a) for p, a in zip(pout, (x, q)) ])
+        log_prob = sum([ p.log_prob(a) for p, a in zip((p1, p2), (a1, a2))])
         self.past_action_log_prob[n, t] = log_prob
         
         self.past_values[n, t] = vout
@@ -301,7 +299,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             (float(entropy.data) - self.stat_average_entropy))
         
         # create action dictionary to the env
-        action = self.pack_action(x, q)
+        action = self.pack_action(a1, a2)
 
         # update counters
         self.t += 1
@@ -527,13 +525,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         with chainer.no_backprop_mode():
             state = self.process_obs(obs)
             pout, _ = self.generator.pi_and_v(state)
+            p1, p2, a1, a2 = pout
 
             if self.act_deterministically:
-                x, q = [ np.argmax(p.log_p.data, axis=1)[0] for p in pout ]
+                a1, a2 = [ np.argmax(p.log_p.data, axis=1)[0] for p in (p1, p2) ]
             else:
-                x, q = [ p.sample().data[0] for p in pout ]
-            
-            return self.pack_action(x, q)
+                return self.pack_action(a1, a2)
 
 
     def load(self, dirname):

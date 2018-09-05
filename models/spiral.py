@@ -20,20 +20,6 @@ from chainer import distributions as D
 from agents import spiral
 
 
-def gumbel_softmax_sampling(pi, t=1.0):
-    """ performs Gumbel Softmax Sampling for pi """
-    p_shape = pi.p.shape
-
-    # sample from uniform dist.
-    low = np.array(0, dtype=np.float32)
-    high = np.array(1, dtype=np.float32)
-    u = D.Uniform(low=low, high=high).sample(sample_shape=p_shape)
-    g = -F.log(-F.log(u))
-
-    z = F.softmax((pi.log_p + g) / t)
-    return z
-
-
 def bw_linear(x_in, x, l):
     return F.matmul(x, l.W)
 
@@ -117,17 +103,19 @@ class SpiralPi(chainer.Chain):
         h_z1 = self.f_dec(self.z1_conv2(h_z1))
         h_z1 = self.f_dec(self.z1_conv3(h_z1))
         h_z1 = F.reshape(h_z1, (1, self.act_pos_dim))
-        a1 = D.Categorical(logit=h_z1)
+        p1 = D.Categorical(logit=h_z1)
+        a1 = p1.sample(1).data
 
         # simple sampling is not differentiable
-        a1_sample = a1.sample(1).data.astype(np.float32)
-        h_z1 = self.f_dec(self.z1_linear1(a1_sample))
+        h_z1 = self.f_dec(self.z1_linear1(a1.astype(np.float32)))
 
         z2 = self.f_dec(self.z1_linear2(F.concat((h_z1, z1), axis=1)))
         h_z2 = self.f_dec(self.z2_linear(z2))
-        a2 = D.Categorical(logit=h_z2)
+        p2 = D.Categorical(logit=h_z2)
 
-        return a1, a2
+        a2 = p2.sample(1).data
+
+        return p1, p2, a1[0,0], a2[0, 0]
 
         
 
