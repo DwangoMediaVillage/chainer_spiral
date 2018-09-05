@@ -60,7 +60,7 @@ class SpiralStepHook(StepHook):
             agent.compute_reward(env.render(mode='rgb_array'))
             env.reset()
 
-            if agent.process_idx == 0 and step % self.save_final_obs_interval == 0:
+            if step % self.save_final_obs_interval == 0:
                 agent.save_final_obs(step, self.outdir_final_obs)
 
         # agent.snap is called once
@@ -583,6 +583,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
     def save_final_obs(self, step, outdir):
         """ save final observation to outdir """
-        figname = "obs_step_{}.png".format(step)
-        figname = os.path.join(outdir, figname)
-        self.image_drawer.draw_and_save(self.fake_data, figname)
+        if self.process_idx == 0:
+            figname = "obs_step_{}.png".format(step)
+            figname = os.path.join(outdir, figname)
+            self.image_drawer.draw_and_save(self.fake_data, figname)
+
