@@ -523,7 +523,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             ('average_value', self.stat_average_value),
             ('average_entropy', self.stat_average_entropy),
             ('l2_loss', self.stat_l2_loss),
-            ('discriminator_loss', self.stat_loss_dis),
             ('pi_loss', self.stat_pi_loss),
             ('v_loss', self.stat_v_loss),
             ('R', self.stat_R),
@@ -536,11 +535,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         if self.reward_mode == 'wgangp':
             ret += [
                 ('discriminator_grad_panalty', self.stat_loss_gp),
-                ('discriminator_gradient_size', self.stat_dis_g)
+                ('discriminator_gradient_size', self.stat_dis_g),
+                ('discriminator_loss', self.stat_loss_dis)
             ]
         elif self.reward_mode == 'dcgan':
             ret += [
-                ('discriminator_accuracy', self.stat_dis_acc)
+                ('discriminator_accuracy', self.stat_dis_acc),
+                ('discriminator_loss', self.stat_loss_dis)
             ]
         
         return ret
