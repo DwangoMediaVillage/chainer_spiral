@@ -34,6 +34,7 @@ def show_drawn_pictures(env, agent, timestep_limit):
     obs = env.reset()
     for t in range(timestep_limit):
         a = agent.act(obs)
+        logger.info('taking action %s', a)
         obs, r, done, info = env.step(a)
 
     agent.stop_episode()
@@ -49,6 +50,7 @@ def run_single_episode(env, agent, timestep_limit):
     obs_hist = {}
     act_hist = {}
     obs = env.reset()
+    agent.generator.reset_state()
     obs_hist[0] = obs
     
     for t in range(timestep_limit):

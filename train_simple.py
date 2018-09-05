@@ -45,8 +45,7 @@ def main():
                                 ' If it does not exist, it will be created.')
     parser.add_argument('--seed', type=int, default=0,
                         help='Random seed [0, 2 ** 32)')
-    parser.add_argument('--lr', type=float, default=7e-4)
-    parser.add_argument('--rmsprop_epsilon', type=float, default=1e-1)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--weight_decay', type=float, default=0.0)
     parser.add_argument('--steps', type=int, default=100)
     parser.add_argument('--eval_interval', type=int, default=10)
@@ -107,10 +106,8 @@ def main():
     gen = SPIRALSimpleModel(obs_space, action_space, in_channel, args.gumbel_tmp)  # generator
     dis = SpiralDiscriminator(in_channel)  # discriminator
 
-    gen_opt = rmsprop_async.RMSpropAsync(
-        lr=args.lr, eps=args.rmsprop_epsilon, alpha=0.99)
-    dis_opt = rmsprop_async.RMSpropAsync(
-        lr=args.lr, eps=args.rmsprop_epsilon, alpha=0.99)
+    gen_opt = chainer.optimizers.Adam(alpha=args.lr, beta1=0.5)
+    dis_opt = chainer.optimizers.Adam(alpha=args.lr, beta1=0.5)
 
     gen_opt.setup(gen)
     dis_opt.setup(dis)
@@ -162,7 +159,7 @@ def main():
             savename = os.path.join(args.load, 'result.mp4')
         else:
             savename = os.path.join(args.outdir, 'result.mp4')
-
+        
         run_demo(env, agent, timestep_limit, suptitle=args.load, savename=savename)
 
     else:
