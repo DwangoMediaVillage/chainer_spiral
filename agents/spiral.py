@@ -131,7 +131,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  lambda_R=1.0,
                  reward_mode='l2',
                  save_final_obs_update_interval=10000,
-                 outdir=None):
+                 outdir=None,
+                 save_final_obs=False):
         
         # globally shared model
         self.shared_generator = generator
@@ -181,11 +182,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.__reset_stats()
 
         # initialize drawer to save the final observation
-        self.image_drawer = ImageDrawer(self.rollout_n)
-        self.save_final_obs_update_interval = save_final_obs_update_interval
-        self.outdir_final_obs = os.path.join(outdir, 'final_obs')  # directory to save the final observation
-        if not os.path.exists(self.outdir_final_obs):
-            os.mkdir(self.outdir_final_obs)
+        self.save_final_obs = save_final_obs
+        if self.save_final_obs:
+            self.image_drawer = ImageDrawer(self.rollout_n)
+            self.save_final_obs_update_interval = save_final_obs_update_interval
+            self.outdir_final_obs = os.path.join(outdir, 'final_obs')  # directory to save the final observation
+            if not os.path.exists(self.outdir_final_obs):
+                os.mkdir(self.outdir_final_obs)
 
 
     def sync_parameters(self):
@@ -569,8 +572,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
             if self.act_deterministically:
                 a1, a2 = [ np.argmax(p.log_p.data, axis=1)[0] for p in (p1, p2) ]
-            else:
-                return self.pack_action(a1, a2)
+
+            return self.pack_action(a1, a2)
 
 
     def load(self, dirname):

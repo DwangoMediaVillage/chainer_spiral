@@ -50,7 +50,6 @@ def run_single_episode(env, agent, timestep_limit):
     act_hist = {}
     obs = env.reset()
     obs_hist[0] = obs
-    print(obs_hist[0]['image'].mean())
     
     for t in range(timestep_limit):
         a = agent.act(obs)
@@ -59,6 +58,7 @@ def run_single_episode(env, agent, timestep_limit):
         obs_hist[t + 1] = obs
         act_hist[t] = a
     
+    agent.generator.reset_state()
     env.reset()
     return obs_hist, act_hist
 

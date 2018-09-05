@@ -123,7 +123,9 @@ def main():
 
     # target image dataset
     train, target_data_sampler = get_mnist(sample_env.imsize, single_class=True, target_label=args.target_label)
-
+    
+    save_final_obs = not args.demo
+    
     agent = spiral.SPIRAL(
         generator=gen,
         discriminator=dis,
@@ -141,15 +143,16 @@ def main():
         lambda_R=args.lambda_R,
         reward_mode=args.reward_mode,
         save_final_obs_update_interval=args.save_final_obs_update_interval,
-        outdir=args.outdir
+        outdir=args.outdir,
+        save_final_obs=save_final_obs
     )
 
     step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.outdir)
 
     if args.load:
-        print(f"sum of params before loading: {get_model_param_sum(agent.generator)}")
+        print(f"sum of params before loading: {get_model_param_sum(agent.generator.pi)}")
         agent.load(args.load)
-        print(f"sum of params after loading: {get_model_param_sum(agent.generator)}")
+        print(f"sum of params after loading: {get_model_param_sum(agent.generator.pi)}")
 
     if args.demo:
         from spiral_evaluator import show_drawn_pictures, run_demo
