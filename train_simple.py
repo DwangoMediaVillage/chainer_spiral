@@ -28,11 +28,10 @@ from chainerrl.optimizers import rmsprop_async
 
 from environments import MyPaintEnv
 from agents import spiral
-from models.spiral import SpiralDiscriminator, SPIRALSimpleModel
 from utils.arg_utils import load_args, print_args
 from utils.stat_utils import get_model_param_sum
-from utils.data_utils import get_mnist
-
+from utils.data_utils import get_mnist, get_toydata
+from models.spiral import SpiralMnistModel, SpiralToyModel, SpiralMnistDiscriminator, SpiralToyDiscriminator
 
 def main():
     import logging
@@ -61,11 +60,12 @@ def main():
     parser.add_argument('--empty_drawing_penalty', type=float, default=1.0)
     parser.add_argument('--max_episode_steps', type=int, default=5)
     parser.add_argument('--save_global_step_interval', type=int, default=10)
-    parser.add_argument('--target_label', type=int, default=1)
     parser.add_argument('--lambda_R', type=float, default=1.0)
     parser.add_argument('--gumbel_tmp', type=float, default=0.1)
     parser.add_argument('--reward_mode', default='l2')
     parser.add_argument('--save_final_obs_update_interval', type=int, default=10)
+    parser.add_argument('--mnist_target_label', type=int)
+    parser.add_argument('--problem', default='toy')
     args = parser.parse_args()
 
     # init a logger
@@ -89,23 +89,41 @@ def main():
     if not (args.load and args.demo):
         args.outdir = experiments.prepare_output_dir(args, args.outdir)
 
-    # define func to create env
-    def make_env(process_idx, test):
-        env = MyPaintEnv(max_episode_steps=args.max_episode_steps)  
-        return env
-
-    sample_env = MyPaintEnv(max_episode_steps=args.max_episode_steps)
-    
+    # define func to create env, target data sampler, and models
     # TODO: MyPaintEnv is not wrapped by EnvSpec
-    timestep_limit = sample_env.tags['max_episode_steps']
-    obs_space = sample_env.observation_space
-    action_space = sample_env.action_space
+    if args.problem == 'toy':
+        imsize = 3
+        def make_env(process_idx, test):
+            env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
+                            imsize=imsize, pos_resolution=imsize)
+            return env
+        _, data_sampler = get_toydata(imsize=imsize)
 
-    in_channel = 1
+        gen = SpiralToyModel(imsize)
+        dis = SpiralToyDiscriminator(imsize)
+        in_channel = 1
+        obs_pos_dim = imsize * imsize
 
-    gen = SPIRALSimpleModel(obs_space, action_space, in_channel, args.gumbel_tmp)  # generator
-    dis = SpiralDiscriminator(in_channel)  # discriminator
+    elif args.problem == 'mnist':
+        imsize = 8
+        def make_env(process_idx, test):
+            env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
+                            imsize=imsize, pos_resolution=imsize)
+            return env
+        if args.mnist_target_label:
+            _, data_sampler = get_mnist(imsize=imsize, single_class=True, target_label=args.mnist_target_label)
+        else:
+            _, data_sampler = get_mnist(imsize=imsize)
+        
+        gen = SpiralMnistModel(imsize)
+        dis = SpiralMnistDiscriminator(imsize)
+        in_channel = 1
+        obs_pos_dim = imsize * imsize
 
+    else:
+        raise NotImplementedError()
+
+    # initialize optimizers
     gen_opt = chainer.optimizers.Adam(alpha=args.lr, beta1=0.5)
     dis_opt = chainer.optimizers.Adam(alpha=args.lr, beta1=0.5)
 
@@ -118,20 +136,19 @@ def main():
         gen_opt.add_hook(NonbiasWeightDecay(args.weight_decay))
         dis_opt.add_hook(NonbiasWeightDecay(args.weight_decay))
 
-    # target image dataset
-    train, target_data_sampler = get_mnist(sample_env.imsize, single_class=True, target_label=args.target_label)
-    
+    # initialize agent
     save_final_obs = not args.demo
-    
+
     agent = spiral.SPIRAL(
         generator=gen,
         discriminator=dis,
         gen_optimizer=gen_opt,
         dis_optimizer=dis_opt,
         in_channel=in_channel,
-        target_data_sampler=target_data_sampler,
-        timestep_limit=timestep_limit,
+        target_data_sampler=data_sampler,
+        timestep_limit=args.max_episode_steps,
         rollout_n=args.rollout_n,
+        obs_pos_dim=obs_pos_dim,
         gamma=args.gamma,
         beta=args.beta,
         gp_lambda=args.gp_lambda,
@@ -144,14 +161,12 @@ def main():
         save_final_obs=save_final_obs
     )
 
-    step_hook = spiral.SpiralStepHook(timestep_limit, args.save_global_step_interval, args.outdir)
-
+    # load from a snapshot
     if args.load:
-        print(f"sum of params before loading: {get_model_param_sum(agent.generator.pi)}")
         agent.load(args.load)
-        print(f"sum of params after loading: {get_model_param_sum(agent.generator.pi)}")
 
     if args.demo:
+        # demo mode
         from spiral_evaluator import run_demo
         env = make_env(0, True)
 
@@ -167,19 +182,22 @@ def main():
             raise NotImplementedError('Invalid demo mode')
         
         run_demo(args.demo, env, agent, savename, args.load)
-        
-
+    
     else:
+        # training mode
+        step_hook = spiral.SpiralStepHook(args.max_episode_steps, args.save_global_step_interval, args.outdir)
+
         if args.processes == 1:
             agent.process_idx = 0
+            env = make_env(0, False)
             experiments.train_agent_with_evaluation(
                 agent=agent,
                 outdir=args.outdir,
-                env=make_env(0, False),
+                env=env,
                 steps=args.steps,
                 eval_n_runs=args.eval_n_runs,
                 eval_interval=args.eval_interval,
-                max_episode_len=timestep_limit * args.rollout_n,
+                max_episode_len=args.max_episode_steps * args.rollout_n,
                 step_hooks=[step_hook],
                 save_best_so_far_agent=False
             )
@@ -193,7 +211,7 @@ def main():
                 steps=args.steps,
                 eval_n_runs=args.eval_n_runs,
                 eval_interval=args.eval_interval,
-                max_episode_len=timestep_limit * args.rollout_n,
+                max_episode_len=args.max_episode_steps * args.rollout_n,
                 global_step_hooks=[step_hook],
                 save_best_so_far_agent=False
             )

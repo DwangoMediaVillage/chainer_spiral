@@ -118,6 +118,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  in_channel,
                  timestep_limit,
                  rollout_n,
+                 obs_pos_dim,
                  act_deterministically=False,
                  gamma=0.9,
                  beta=1e-2,
@@ -134,7 +135,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  save_final_obs_update_interval=10000,
                  outdir=None,
                  save_final_obs=False):
-        
+
         # globally shared model
         self.shared_generator = generator
         self.shared_discriminator = discriminator
@@ -153,6 +154,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         self.timestep_limit = timestep_limit  # time step length of each episode
         self.rollout_n = rollout_n
+        self.obs_pos_dim = obs_pos_dim  # dim size of the position input
 
         self.act_deterministically = act_deterministically
         self.gamma = gamma
@@ -251,7 +253,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         c = self.__process_image(c)
 
         # position
-        x /= float(self.generator.pi.obs_pos_dim)
+        x /= float(self.obs_pos_dim)
         x = np.asarray(x, dtype=np.float32) 
         x = np.reshape(x, (1, 1))
 

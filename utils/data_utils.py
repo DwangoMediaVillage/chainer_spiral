@@ -1,6 +1,7 @@
 import chainer
 import cv2
 import numpy as np
+import math
 
 def single_class_filter(xs, label):
     assert isinstance(label, int)
@@ -30,3 +31,21 @@ def get_mnist(imsize=64, single_class=False, target_label=None):
         return chainer.Variable(y)
 
     return train, target_data_sampler
+
+def get_toydata(imsize=3):
+    """ create a simple image and returns a func to feed data """
+    assert imsize >= 3
+
+    train = np.ones((imsize, imsize))
+
+    # vertical line
+    idx = math.floor(imsize / 2)
+    train[:, idx] = 0.0
+    train_v = train.reshape(1, 1, imsize, imsize).astype(np.float32)
+    train_v = chainer.Variable(train_v)
+
+    # define a func to return train
+    def data_sampler():
+        return train_v
+        
+    return train, data_sampler

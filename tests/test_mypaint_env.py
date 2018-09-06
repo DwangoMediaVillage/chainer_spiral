@@ -57,10 +57,7 @@ def test_env_point_conversion():
     x, y = env.convert_x(pos_resolution * pos_resolution - 1)
     eq_(x, env.tile_offset + imsize)
     eq_(y, env.tile_offset + imsize)
-
-
-
-
+    
 
 if __name__ == '__main__':
     test_reset_env()
