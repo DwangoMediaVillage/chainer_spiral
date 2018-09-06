@@ -152,19 +152,22 @@ def main():
         print(f"sum of params after loading: {get_model_param_sum(agent.generator.pi)}")
 
     if args.demo:
-        from spiral_evaluator import show_drawn_pictures, run_demo
+        from spiral_evaluator import run_demo
         env = make_env(0, True)
 
         savedir = args.load if args.load else args.outdir
         
-        if args.demo == 'static':
-            savename = os.path.join(savedir, 'result.png')
-            run_demo(env, agent, timestep_limit, suptitle=args.load, savename=savename, anim=False)
+        if args.demo in 'static':
+            savename = os.path.join(savedir, 'static_result.png')
         elif args.demo == 'movie':
-            savename = os.path.join(savedir, 'result.mp4')
-            run_demo(env, agent, timestep_limit, suptitle=args.load, savename=savename, anim=True)
+            savename = os.path.join(savedir, 'movie_result.mp4')
+        elif args.demo == 'many':
+            savename = os.path.join(savedir, 'many_result.png')
         else:
             raise NotImplementedError('Invalid demo mode')
+        
+        run_demo(args.demo, env, agent, savename, args.load)
+        
 
     else:
         if args.processes == 1:

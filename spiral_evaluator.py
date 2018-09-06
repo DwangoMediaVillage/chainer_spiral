@@ -28,43 +28,6 @@ def set_axis_prop(ax, title=None):
     ax.set_yticks([])
     ax.set_aspect('equal')
 
-def show_drawn_pictures(env, agent, timestep_limit):
-    """ Make agent to draw and show the drawn picture using matplotlib """
-    
-    obs = env.reset()
-    for t in range(timestep_limit):
-        a = agent.act(obs)
-        logger.info('taking action %s', a)
-        obs, r, done, info = env.step(a)
-
-    agent.stop_episode()
-
-    # show image
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ims = ax.imshow(obs['image'])
-    set_axis_prop(ax, 'Drawn by an agent')
-    plt.show()
-
-def run_single_episode(env, agent, timestep_limit):
-    obs_hist = {}
-    act_hist = {}
-    obs = env.reset()
-    agent.generator.reset_state()
-    obs_hist[0] = obs
-    
-    for t in range(timestep_limit):
-        a = agent.act(obs)
-        logger.info('taking action %s', a)
-        obs, r, done, info = env.step(a)
-        obs_hist[t + 1] = obs
-        act_hist[t] = a
-    
-    agent.generator.reset_state()
-    env.reset()
-    return obs_hist, act_hist
-
-
 def set_plot_scale(ax, m=0.1):
     min_x, max_x = ax.get_xlim()
     min_y, max_y = ax.get_ylim()
@@ -122,68 +85,102 @@ def plot_action(ax, act, T, init_obs, convert_pos_func, lw=2.0):
     set_plot_scale(ax)
 
 
-def run_demo(env, agent, timestep_limit, N=4, suptitle=None, savename=None, anim=False):
-    """ demo mode. Agent draws N pictures and visualize drawn pictures as movie and static plots """
-
-    agent.act_deterministically = False
-
-    # get rollout results
-    obs_hist, act_hist = [], []
-    for n in range(N):
-        __obs_hist, __act_hist = run_single_episode(env, agent, timestep_limit)
-        obs_hist.append(__obs_hist)
-        act_hist.append(__act_hist)
-
-    fig = plt.figure(figsize=(7, 7))
-    gs = gridspec.GridSpec(N, 3)
+def run_single_episode(env, agent, T):
+    obs_hist = {}
+    act_hist = {}
+    obs = env.reset()
+    agent.generator.reset_state()
+    obs_hist[0] = obs
     
-    ims = []
+    for t in range(T):
+        a = agent.act(obs)
+        logger.info('taking action %s', a)
+        obs, r, done, info = env.step(a)
+        obs_hist[t + 1] = obs
+        act_hist[t] = a
+    
+    agent.generator.reset_state()
+    env.reset()
+    return obs_hist, act_hist
+
+def run_episode(env, agent, N, T):
+    """ rollout N times """
+    o, a = [], []
     for n in range(N):
-        # movie
-        ax_movie = plt.subplot(gs[n, 0])
-        im = ax_movie.imshow(obs_hist[n][0]['image'])  # image at t=0
-        set_axis_prop(ax_movie)
-        ims.append(im)
+        __o, __a = run_single_episode(env, agent, T)
+        o.append(__o)
+        a.append(__a)
+    return o, a
 
-        if n == 0: ax_movie.set_title('Movie')
+def run_demo(demo_mode, env, agent, savename, suptitle):
+    """ Demo mode. Agent draws pictures """    
 
-        # plot result
-        ax_res = plt.subplot(gs[n, 1])
-        res = ax_res.imshow(obs_hist[n][timestep_limit]['image'])
-        set_axis_prop(ax_res)
+    T = env.tags['max_episode_steps']
 
-        if n == 0: ax_res.set_title('Final observation')
-
-        # plot actions
-        ax_act = plt.subplot(gs[n, 2])
-        plot_action(ax_act, act_hist[n], timestep_limit, obs_hist[n][0], env.convert_x)
-        set_axis_prop(ax_act)
-
-        if n == 0: ax_act.set_title('Lines colored by ordering')
-
-    # set title
-    if suptitle:
+    if demo_mode == 'static':
+        N = 5
+        obs, act = run_episode(env, agent, N, T)
+        fig = plt.figure(figsize=(7, 7))
+        gs = gridspec.GridSpec(N, 2)
+        for n in range(N):
+            # final obs    
+            ax_obs = plt.subplot(gs[n, 0])
+            ax_obs.imshow(obs[n][T]['image'])
+            set_axis_prop(ax_obs)
+            if n == 0: ax_obs.set_title('Final observation')
+            
+            # plot act
+            ax_act = plt.subplot(gs[n, 1])
+            plot_action(ax_act, act[n], T, obs[n][0], env.convert_x)
+            set_axis_prop(ax_act)
+            if n == 0: ax_act.set_title('Line colored by order')
         fig.suptitle(suptitle)
+        plt.savefig(savename)
 
-    if anim:
-        # render as a movie
+    elif demo_mode == 'movie':
+        N = 5
+        obs, act = run_episode(env, agent, N, T)
+        fig = plt.figure(figsize=(7, 7))
+        gs = gridspec.GridSpec(N, 3)
+        ims = []
+        for n in range(N):
+            # obs
+            ax_movie = plt.subplot(gs[n, 0])
+            im = ax_movie.imshow(obs[n][0]['image'])  # image at t=0
+            ims.append(im)
+            if n == 0: ax_movie.set_title('Movie')
+            
+            # final obs
+            ax_obs = plt.subplot(gs[n, 1])
+            ax_obs.imshow(obs[n][T]['image'])
+            set_axis_prop(ax_obs)
+            if n == 0: ax_obs.set_title('Final observation')
+            
+            # plot act
+            ax_act = plt.subplot(gs[n, 2])
+            plot_action(ax_act, act[n], T, obs[n][0], env.convert_x)
+            set_axis_prop(ax_act)
+            if n == 0: ax_act.set_title('Line colored by order')          
+        fig.suptitle(suptitle)
         def frame_func(t):
             for n, im in enumerate(ims):
-                im.set_data(obs_hist[n][t]['image'])
+                im.set_data(obs[n][t]['image'])
             return ims
-    
-        ani = anim.FuncAnimation(fig, frame_func, frames=range(0, timestep_limit + 1), interval=100)
+        ani = anim.FuncAnimation(fig, frame_func, frames=range(0, T + 1), interval=100)
+        ani.save(savename)
 
-        if savename:
-            ani.save(savename)
-        else:
-            plt.show()
-    else:
-        # save as a png file
-        if savename:
-            plt.savefig(savename)
-        else:
-            plt.show()
-    
+    elif demo_mode == 'many':
+        N = 10
+        obs, act = run_episode(env, agent, N * N, T)
+        fig = plt.figure(figsize=(7, 7))
+        gs = gridspec.GridSpec(N, N)
+        n = 0
+        for i in range(N):
+            for j in range(N):
+                ax = plt.subplot(gs[i, j])
+                ax.imshow(obs[n][T]['image'])
+                set_axis_prop(ax)
+                n += 1
+        fig.suptitle(suptitle)
+        plt.savefig(savename)
 
-    

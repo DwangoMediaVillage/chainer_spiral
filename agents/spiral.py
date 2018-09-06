@@ -77,9 +77,10 @@ class ImageDrawer(object):
             self.ims.append(im)
     
 
-    def draw_and_save(self, imgs, figname):
+    def draw_and_save(self, imgs, figname, n):
         for i, im in enumerate(self.ims):
             im.set_data(imgs[i][0, 0])
+        self.fig.suptitle(f"Update = {n}")
         plt.savefig(figname)
 
 
@@ -389,7 +390,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             figname = "obs_update_{}.png".format(self.update_n)
             figname = os.path.join(self.outdir_final_obs, figname)
             logger.debug('Saving final observation as %s', figname)
-            self.image_drawer.draw_and_save(self.fake_data, figname)
+            self.image_drawer.draw_and_save(self.fake_data, figname, self.update_n)
 
         self.__reset_buffers()
         self.__reset_flags()
