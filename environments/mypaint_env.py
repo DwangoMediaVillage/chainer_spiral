@@ -151,7 +151,7 @@ class MyPaintEnv(gym.Env):
         self.surface.clear()
 
         # fill the canvas with the background color
-        with self.surface.cairo_request(0, 0, self.imsize + self.tile_offset * 2, self.imsize + self.imsize * 2) as cr:
+        with self.surface.cairo_request(0, 0, self.imsize + self.tile_offset * 2, self.imsize + self.tile_offset * 2) as cr:
             r, g, b = self.bg_color
             cr.set_source_rgb(r, g, b)
             cr.rectangle(self.tile_offset, self.tile_offset, self.imsize + self.tile_offset * 2, self.imsize + self.tile_offset * 2)
