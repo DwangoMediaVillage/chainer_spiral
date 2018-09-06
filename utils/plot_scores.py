@@ -93,7 +93,11 @@ def plot_score(args):
 
     # plt.suptitle(target)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-    plt.show()
+
+    if args.savename:
+        plt.savefig(args.savename)
+    else:
+        plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

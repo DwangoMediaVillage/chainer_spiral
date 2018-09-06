@@ -113,7 +113,7 @@ def plot_action(ax, act, T, init_obs, convert_pos_func, lw=2.0):
 
         # may draw a line
         if prob:
-            ax.plot([last_x, x], [-last_y, -y], color=color, lw=lw)
+            ax.plot([last_x, x], [last_y, y], color=color, lw=lw)
 
         # update
         last_prob = prob
@@ -122,7 +122,7 @@ def plot_action(ax, act, T, init_obs, convert_pos_func, lw=2.0):
     set_plot_scale(ax)
 
 
-def run_demo(env, agent, timestep_limit, N=4, suptitle=None, savename=None):
+def run_demo(env, agent, timestep_limit, N=4, suptitle=None, savename=None, anim=False):
     """ demo mode. Agent draws N pictures and visualize drawn pictures as movie and static plots """
 
     agent.act_deterministically = False
@@ -165,20 +165,25 @@ def run_demo(env, agent, timestep_limit, N=4, suptitle=None, savename=None):
     if suptitle:
         fig.suptitle(suptitle)
 
-    # render as a movie
-    def frame_func(t):
-        for n, im in enumerate(ims):
-            im.set_data(obs_hist[n][t]['image'])
-        return ims
+    if anim:
+        # render as a movie
+        def frame_func(t):
+            for n, im in enumerate(ims):
+                im.set_data(obs_hist[n][t]['image'])
+            return ims
     
-    ani = anim.FuncAnimation(fig, frame_func, frames=range(0, timestep_limit + 1), interval=100)
+        ani = anim.FuncAnimation(fig, frame_func, frames=range(0, timestep_limit + 1), interval=100)
 
-    if savename:
-        ani.save(savename)
+        if savename:
+            ani.save(savename)
+        else:
+            plt.show()
     else:
-        plt.show()
-
-
+        # save as a png file
+        if savename:
+            plt.savefig(savename)
+        else:
+            plt.show()
     
 
     

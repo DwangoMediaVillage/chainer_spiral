@@ -51,7 +51,7 @@ def main():
     parser.add_argument('--eval_interval', type=int, default=10)
     parser.add_argument('--eval_n_runs', type=int, default=2)
     parser.add_argument('--load', type=str, default='')
-    parser.add_argument('--demo', action='store_true', default=False)
+    parser.add_argument('--demo')
     parser.add_argument('--rollout_n', type=int, default=2)
     parser.add_argument('--profile', action='store_true')
     parser.add_argument('--gamma', type=float, default=0.9)
@@ -153,14 +153,18 @@ def main():
 
     if args.demo:
         from spiral_evaluator import show_drawn_pictures, run_demo
-
         env = make_env(0, True)
-        if args.load:
-            savename = os.path.join(args.load, 'result.mp4')
-        else:
-            savename = os.path.join(args.outdir, 'result.mp4')
+
+        savedir = args.load if args.load else args.outdir
         
-        run_demo(env, agent, timestep_limit, suptitle=args.load, savename=savename)
+        if args.demo == 'static':
+            savename = os.path.join(savedir, 'result.png')
+            run_demo(env, agent, timestep_limit, suptitle=args.load, savename=savename, anim=False)
+        elif args.demo == 'movie':
+            savename = os.path.join(savedir, 'result.mp4')
+            run_demo(env, agent, timestep_limit, suptitle=args.load, savename=savename, anim=True)
+        else:
+            raise NotImplementedError('Invalid demo mode')
 
     else:
         if args.processes == 1:
