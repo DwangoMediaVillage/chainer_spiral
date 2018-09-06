@@ -86,6 +86,12 @@ def plot_score(args):
         scalar = value[inds]
         if cut_idx:
             scalar = value[inds][:cut_idx]
+        
+        if args.conv_num:
+            num = args.conv_num
+            b = np.ones(num) / num
+            scalar = np.convolve(scalar, b, mode='same')
+
         ax.plot(steps, scalar)
         set_axis_prop(ax, key, x_label)
         ax.set_xlim(0, steps.max())
@@ -103,6 +109,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('target_dir')
     parser.add_argument('--savename')
+    parser.add_argument('--conv_num', type=int)
     args = parser.parse_args()
 
     plot_score(args)
