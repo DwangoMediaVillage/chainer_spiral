@@ -112,10 +112,10 @@ def run_episode(env, agent, N, T):
         a.append(__a)
     return o, a
 
-def run_demo(demo_mode, env, agent, savename, suptitle):
+def run_demo(demo_mode, env, agent, max_episode_steps, savename, suptitle):
     """ Demo mode. Agent draws pictures """    
 
-    T = env.tags['max_episode_steps']
+    T = max_episode_steps
 
     if demo_mode == 'static':
         N = 5

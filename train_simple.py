@@ -26,7 +26,7 @@ from chainerrl import misc
 from chainerrl.optimizers.nonbias_weight_decay import NonbiasWeightDecay
 from chainerrl.optimizers import rmsprop_async
 
-from environments import MyPaintEnv
+from environments import MyPaintEnv, ToyEnv
 from agents import spiral
 from utils.arg_utils import load_args, print_args
 from utils.stat_utils import get_model_param_sum
@@ -97,10 +97,10 @@ def main():
     if args.problem == 'toy':
         imsize = 3
         def make_env(process_idx, test):
-            env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
-                            imsize=imsize, pos_resolution=imsize, brush_info_file=args.brush_info_file)
+            env = ToyEnv(imsize)
             return env
-        _, data_sampler = get_toydata(imsize=imsize)
+
+        _, data_sampler = get_toydata(imsize)
 
         gen = SpiralToyModel(imsize)
         dis = SpiralToyDiscriminator(imsize)
@@ -184,7 +184,7 @@ def main():
         else:
             raise NotImplementedError('Invalid demo mode')
         
-        run_demo(args.demo, env, agent, savename, args.load)
+        run_demo(args.demo, env, agent, args.max_episode_steps, savename, args.load)
     
     else:
         # training mode

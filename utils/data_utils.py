@@ -2,6 +2,7 @@ import chainer
 import cv2
 import numpy as np
 import math
+from environments import ToyEnv
 
 def single_class_filter(xs, label):
     assert isinstance(label, int)
@@ -33,17 +34,20 @@ def get_mnist(imsize=64, single_class=False, target_label=None, bin=False):
 
     return train, target_data_sampler
 
-def get_toydata(imsize=5):
+def get_toydata(imsize):
     """ create a simple image and returns a func to feed data """
-    assert imsize >= 3
+    env = ToyEnv(imsize)
+    indices = [1, 4, 7]
+    
+    for index in indices:
+        a = {'position': index, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 1}
+        env.step(a)
 
-    train = np.ones((imsize, imsize))
-
-    # vertical line
-    idx = math.floor(imsize / 2)
-    train[:, idx] = 0.0
-    train_v = train.reshape(1, 1, imsize, imsize).astype(np.float32)
-    train_v = chainer.Variable(train_v)
+    train = env.render('rgb_array')
+    train = cv2.cvtColor(train, cv2.COLOR_RGB2GRAY)  # (N, N) uint8
+    train = train.astype(np.float32) / 255.
+    train = train.reshape(1, 1, imsize, imsize).astype(np.float32)
+    train_v = chainer.Variable(train)
 
     # define a func to return train
     def data_sampler():
