@@ -67,7 +67,9 @@ def main():
     parser.add_argument('--save_final_obs_update_interval', type=int, default=10)
     parser.add_argument('--mnist_target_label', type=int)
     parser.add_argument('--problem', default='toy')
+    parser.add_argument('--mnist_binarization',type=bool, default=False)
     args = parser.parse_args()
+    print_args(args)
 
     # init a logger
     logging.basicConfig(level=args.logger_level)
@@ -112,9 +114,9 @@ def main():
                             imsize=imsize, pos_resolution=imsize, brush_info_file=args.brush_info_file)
             return env
         if args.mnist_target_label:
-            _, data_sampler = get_mnist(imsize=imsize, single_class=True, target_label=args.mnist_target_label)
+            _, data_sampler = get_mnist(imsize=imsize, single_class=True, target_label=args.mnist_target_label, bin=args.mnist_binarization)
         else:
-            _, data_sampler = get_mnist(imsize=imsize)
+            _, data_sampler = get_mnist(imsize=imsize, bin=args.mnist_binarization)
         
         gen = SpiralMnistModel(imsize)
         dis = SpiralMnistDiscriminator(imsize)

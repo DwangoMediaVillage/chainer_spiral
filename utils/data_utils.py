@@ -8,7 +8,7 @@ def single_class_filter(xs, label):
     indices = [ i for i, x in enumerate(xs) if x[1] == label ]
     return [ xs[i][0] for i in indices ]
 
-def get_mnist(imsize=64, single_class=False, target_label=None, thres=False):
+def get_mnist(imsize=64, single_class=False, target_label=None, bin=False):
     """ maybe download mnist dataset, and returns single class data if specified """
     train, _ = chainer.datasets.get_mnist(withlabel=True)
     
@@ -24,7 +24,7 @@ def get_mnist(imsize=64, single_class=False, target_label=None, thres=False):
         y = train_iter.next()[0].data
         y = np.reshape(y, (28, 28))
         y = cv2.resize(y, (imsize, imsize))
-        if thres:
+        if bin:
             thresh = 0.5
             _, y = cv2.threshold(y, thresh, 1.0, cv2.THRESH_BINARY)
         y = np.reshape(y, (1, 1, imsize, imsize))

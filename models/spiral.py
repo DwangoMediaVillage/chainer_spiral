@@ -169,6 +169,8 @@ class MnistValueNet(chainer.Chain):
             # convolution after concat
             self.e2_c1 = L.Convolution2D(16, 16, stride=2, ksize=4, pad=1)
             self.e2_c2 = L.Convolution2D(16, 16, stride=1, ksize=4, pad=1)
+            
+            self.lstm = L.LSTM(144, 144)
             self.e2_l1 = L.Linear(144, 1)
 
     def __call__(self, obs):
@@ -185,6 +187,7 @@ class MnistValueNet(chainer.Chain):
         h = self.f(self.e2_c1(h))
         h = self.f(self.e2_c2(h))
         h = F.expand_dims(F.flatten(h), 0)
+        h = self.lstm(h)
         h = self.e2_l1(h)
         return h
 
@@ -277,7 +280,9 @@ class ToyValueNet(chainer.Chain):
             self.e1_a2 = L.Linear(1, 5)
 
             self.e2_l1 = L.Linear(10, 10)
+            self.lstm = L.Linear(10, 10)
             self.e2_l2 = L.Linear(10, 1)
+
     
     def __call__(self, obs):
         o_c, o_a1, o_a2 = obs
@@ -285,9 +290,9 @@ class ToyValueNet(chainer.Chain):
         h_a2 = self.f(self.e1_a2(o_a2))
         h_a = F.concat((h_a1, h_a2), axis=1)
         h_c = self.f(self.e1_c1(o_c))
-        
         h = h_c + h_a
         h = self.f(self.e2_l1(h))
+        h = self.lstm(h)
         h = self.e2_l2(h)
         return h
 
