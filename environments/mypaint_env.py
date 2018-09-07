@@ -21,7 +21,7 @@ class MyPaintEnv(gym.Env):
         'render.modes': ['human', 'rgb_array'],
     }
 
-    def __init__(self, logger=None, imsize=64, bg_color=None, max_episode_steps=10, pos_resolution=32):
+    def __init__(self, logger=None, imsize=64, bg_color=None, max_episode_steps=10, pos_resolution=32, brush_info_file=None):
         """ initialize environment """
         super().__init__()
 
@@ -63,9 +63,10 @@ class MyPaintEnv(gym.Env):
             self.bg_color = bg_color
 
         # open brush 
-        brush_info_file = os.getenv('BRUSHINFO')
         if brush_info_file is None:
-            raise ValueError('You need to specify brush file by BRUSHINFO')
+            brush_info_file = os.getenv('BRUSHINFO')
+            if brush_info_file is None:
+                raise ValueError('You need to specify brush file')
 
         self.logger.debug('Open brush info from %s', brush_info_file)
 

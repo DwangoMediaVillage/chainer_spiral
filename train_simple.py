@@ -38,6 +38,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('processes', type=int)
+    parser.add_argument('--brush_info_file')
     parser.add_argument('--logger_level', type=int, default=logging.DEBUG)
     parser.add_argument('--outdir', type=str, default='results',
                             help='Directory path to save output files.'
@@ -95,7 +96,7 @@ def main():
         imsize = 3
         def make_env(process_idx, test):
             env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
-                            imsize=imsize, pos_resolution=imsize)
+                            imsize=imsize, pos_resolution=imsize, brush_info_file=args.brush_info_file)
             return env
         _, data_sampler = get_toydata(imsize=imsize)
 
@@ -108,7 +109,7 @@ def main():
         imsize = 8
         def make_env(process_idx, test):
             env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
-                            imsize=imsize, pos_resolution=imsize)
+                            imsize=imsize, pos_resolution=imsize, brush_info_file=args.brush_info_file)
             return env
         if args.mnist_target_label:
             _, data_sampler = get_mnist(imsize=imsize, single_class=True, target_label=args.mnist_target_label)

@@ -16,6 +16,7 @@ class RandomAgent(object):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--brush_info_file')
     parser.add_argument('--image_resolution', type=int, default=64)
     parser.add_argument('--pos_resolution', type=int, default=32)
     parser.add_argument('--max_episode_steps', type=int, default=10)
@@ -23,7 +24,8 @@ if __name__ == '__main__':
 
     env = MyPaintEnv(imsize=args.image_resolution, 
                         pos_resolution=args.pos_resolution, 
-                        max_episode_steps=args.max_episode_steps)
+                        max_episode_steps=args.max_episode_steps,
+                        brush_info_file=args.brush_info_file)
     
     # Gym's monitor does not support small image inputs
     if args.image_resolution >= 30:
