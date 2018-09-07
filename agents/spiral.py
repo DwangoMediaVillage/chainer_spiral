@@ -311,12 +311,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # calc additional reward during drawing process
         if t > 0:
-            if self.past_brush_prob[n, t - 1] and a2:
+            if self.past_brush_prob[n, t - 1] and int(a2.data):
                 self.continuous_drawing_step += 1
             else:
                 self.continuous_drawing_step = 0
 
-        self.past_brush_prob[n, t] = a2
+        self.past_brush_prob[n, t] = int(a2.data)
 
         if self.continuous_drawing_step > 0:
             continuous_reward = self.continuous_drawing_lambda * 1.0 / self.continuous_drawing_step
@@ -339,7 +339,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             (float(entropy.data) - self.stat_average_entropy))
         
         # create action dictionary to the env
-        action = self.pack_action(a1, a2)
+        action = self.pack_action(int(a1.data), int(a2.data))
 
         if self.process_idx == 0:
             logger.debug("Taking action %s", action)
@@ -347,9 +347,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # check the last step's pos vs. current pos
         # a1 is position
         if t > 0:
-            if a1 == self.last_x:
+            if int(a1.data) == self.last_x:
                 self.past_reward[n, t] -= self.staying_penalty
-        self.last_x = a1
+        self.last_x = int(a1.data)
         
         # update counters
         self.t += 1
@@ -589,7 +589,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             if self.act_deterministically:
                 a1, a2 = [ np.argmax(p.log_p.data, axis=1)[0] for p in (p1, p2) ]
 
-            return self.pack_action(a1, a2)
+            return self.pack_action(int(a1.data), int(a2.data))
 
 
     def load(self, dirname):

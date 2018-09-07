@@ -19,6 +19,8 @@ from chainer import links as L
 from chainer import distributions as D
 from agents import spiral
 
+from chainerrl.distribution import SoftmaxDistribution
+
 
 def bw_linear(x_in, x, l):
     return F.matmul(x, l.W)
@@ -226,17 +228,15 @@ class ToyPolicyNet(chainer.Chain):
             self.e1_c1 = L.Linear(imsize * imsize, 30)
             self.e1_a1 = L.Linear(1, 15)
             self.e1_a2 = L.Linear(1, 15)
-            self.e2_l1 = L.Linear(30, 72)
-            self.lstm = L.LSTM(72, 72)
+            self.e2_l1 = L.Linear(30, 30)
+            self.lstm = L.LSTM(30, 30)
 
-            self.d_c1 = L.Convolution2D(8, 16, ksize=3, pad=1)
-            self.d_c2 = L.Deconvolution2D(16, 16, stride=2, pad=1, ksize=3)
-            self.d_c3 = L.Convolution2D(16, 16, stride=2, pad=1, ksize=2)
-            self.d_c4 = L.Convolution2D(16, 1, ksize=3, pad=1)
-    
-            self.d_l1 = L.Linear(1, 8)
-            self.d_l2 = L.Linear(80, 8)
-            self.d_l3 = L.Linear(8, 2)
+            self.d_a1_l1 = L.Linear(30, 15)
+            self.d_a1_l2 = L.Linear(15, imsize * imsize)
+
+            self.d_a2_l1 = L.Linear(30, 10)
+            self.d_a2_l2 = L.Linear(10, 2)
+
 
     def __call__(self, obs):
         o_c, o_a1, o_a2 = obs
@@ -252,25 +252,16 @@ class ToyPolicyNet(chainer.Chain):
 
         # decoder part
         z1 = h
-        h_z1 = F.reshape(z1, (1, 8, 3, 3))
-        h_z1 = self.g(self.d_c1(h_z1))
-        h_z1 = self.g(self.d_c2(h_z1))
-        h_z1 = self.g(self.d_c3(h_z1))
-        h_z1 = self.g(self.d_c4(h_z1))
-        h_z1 = F.expand_dims(F.flatten(h_z1), 0)
-        p1 = D.Categorical(logit=h_z1)
-        a1 = p1.sample(1).data  # sampling
+        z1 = self.f(self.d_a1_l1(z1))
+        z1 = self.d_a1_l2(z1)
+        p1 = SoftmaxDistribution(z1)
 
-        # decode prob
-        h_a1 = self.g(self.d_l1(a1.astype(np.float32)))
-        h_a1 = F.concat((z1, h_a1), axis=1)
-        z2 = self.g(self.d_l2(h_a1))
+        z2 = h
+        z2 = self.f(self.d_a2_l1(z2))
+        z2 = self.d_a2_l2(z2)
+        p2 = SoftmaxDistribution(z2)
 
-        h = self.d_l3(z2)
-        p2 = D.Categorical(logit=h)
-        a2 = p2.sample(1).data  # sampling
-
-        return p1, p2, a1[0, 0], a2[0, 0]
+        return p1, p2, p1.sample(), p2.sample()
 
     
 class ToyValueNet(chainer.Chain):
