@@ -265,13 +265,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     
     def __process_image(self, image):
         if self.in_channel == 1:
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-            image = np.expand_dims(image, -1)
-
-        # normalize from [0, 255] to [0, 1]
-        image = np.asarray(image, dtype=np.float32) / 255.0
-        image = np.rollaxis(image, -1)
-        image = np.expand_dims(image, 0)
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
+            image = image.astype(np.float32) / 255.0
+            image = np.reshape(image, [1, 1] + list(image.shape))
+        else:
+            raise NotImplementedError("not implemented in case of channel != 1")
         return  image
     
     def pack_action(self, x, q):
