@@ -121,8 +121,8 @@ class MyPaintEnv(gym.Env):
     def convert_x(self, x):
         """ convert position id -> a point (p1, p2) """
         assert x < self.pos_resolution ** 2
-        p1 = (x % self.pos_resolution) / (self.pos_resolution - 1) * self.imsize + self.tile_offset
-        p2 = (x // self.pos_resolution) / (self.pos_resolution - 1) * self.imsize + self.tile_offset
+        p1 = (x % self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
+        p2 = (x // self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
         return int(p1), int(p2)
 
     def __draw(self, x, pressure, xtilt=0, ytilt=0, dtime=0.1, viewzoom=1.0, viewrotation=0.0):
@@ -130,8 +130,8 @@ class MyPaintEnv(gym.Env):
         self.surface.begin_atomic()
         self.brush.stroke_to(
             self.surface.backend,
-            int(p1),
-            int(p2),
+            p1,
+            p2,
             pressure,
             xtilt,
             ytilt,
@@ -183,9 +183,11 @@ class MyPaintEnv(gym.Env):
 
         elif mode == 'rgb_array':
             return self._get_rgb_array()
+        else:
+            raise NotImplementedError
 
 
-    def _get_rgb_array(self):
+    def _get_rgb_array(self, cut=True):
         """ render the current canvas as a rgb array
         """
         buf = pixbufsurface.render_as_pixbuf(self.surface)
@@ -197,7 +199,8 @@ class MyPaintEnv(gym.Env):
         img = img[:, :, :3]  # discard the alpha channel
 
         # cut out the canvas
-        img = img[self.tile_offset:self.tile_offset+self.imsize,
+        if cut:
+            img = img[self.tile_offset:self.tile_offset+self.imsize,
                     self.tile_offset:self.tile_offset+self.imsize, :]
 
         return img

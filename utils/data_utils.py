@@ -33,7 +33,7 @@ def get_mnist(imsize=64, single_class=False, target_label=None, bin=False):
 
     return train, target_data_sampler
 
-def get_toydata(imsize=3):
+def get_toydata(imsize=5):
     """ create a simple image and returns a func to feed data """
     assert imsize >= 3
 
