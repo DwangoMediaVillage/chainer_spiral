@@ -16,11 +16,8 @@ from chainerrl.recurrent import RecurrentChainMixin
 
 from chainer import functions as F
 from chainer import links as L
-from chainer import distributions as D
 from agents import spiral
-
 from chainerrl.distribution import SoftmaxDistribution
-
 
 def bw_linear(x_in, x, l):
     return F.matmul(x, l.W)
@@ -61,18 +58,19 @@ class AutoregressiveDecoder(chainer.Chain):
         h = self.f(self.l1_c3(h))
         h = self.l1_c4(h)
         h = F.expand_dims(F.flatten(h), 0)
-        p1 = D.Categorical(logit=h)
-        a1 = p1.sample(1).data  # sampling
+        p1 = SoftmaxDistribution(h)
+        a1 = p1.sample()
 
         # decode prob
-        h_a1 = self.f(self.l1_l1(a1.astype(np.float32)))
+        h_a1 = self.f(self.l1_l1( np.expand_dims(a1.data, 0).astype(np.float32)))
         h_a1 = F.concat((z1, h_a1), axis=1)
-        z2 = self.f(self.l1_l2(h_a1))
 
-        h = self.f(self.l2_l1(z2))
-        p2 = D.Categorical(logit=h)
-        a2 = p2.sample(1).data  # sampling
-        return p1, p2, a1[0, 0], a2[0, 0]
+        z2 = self.f(self.l1_l2(h_a1))
+        h_a2 = self.l2_l1(z2)
+        p2 = SoftmaxDistribution(h_a2)
+        a2 = p2.sample()
+
+        return p1, p2, a1, a2
 
 
 class SpiralMnistDiscriminator(chainer.Chain):
