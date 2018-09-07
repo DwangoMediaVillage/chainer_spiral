@@ -116,6 +116,7 @@ def run_demo(demo_mode, env, agent, max_episode_steps, savename, suptitle):
     """ Demo mode. Agent draws pictures """    
 
     T = max_episode_steps
+    agent.act_deterministically = False
 
     if demo_mode == 'static':
         N = 5
@@ -182,5 +183,6 @@ def run_demo(demo_mode, env, agent, max_episode_steps, savename, suptitle):
                 set_axis_prop(ax)
                 n += 1
         fig.suptitle(suptitle)
+        print(f"saveing figure to {savename}")
         plt.savefig(savename)
 

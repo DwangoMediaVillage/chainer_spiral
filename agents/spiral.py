@@ -134,7 +134,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  reward_mode='l2',
                  save_final_obs_update_interval=10000,
                  outdir=None,
-                 save_final_obs=False):
+                 save_final_obs=False,
+                 staying_penalty=0.0):
 
         # globally shared model
         self.shared_generator = generator
@@ -171,6 +172,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         
         assert empty_drawing_penalty >= 0
         self.empty_drawing_penalty = empty_drawing_penalty
+
+        assert staying_penalty >= 0
+        self.staying_penalty = staying_penalty
 
         self.average_value_decay = average_value_decay
         self.average_entropy_decay = average_entropy_decay
@@ -222,6 +226,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.past_R = {}
         self.fake_data = {}
         self.y_fake = {}
+        self.last_x = None
 
     def __reset_stats(self):
         """ reset interval buffers for statistics """
@@ -339,6 +344,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         if self.process_idx == 0:
             logger.debug("Taking action %s", action)
 
+        # check the last step's pos vs. current pos
+        # a1 is position
+        if t > 0:
+            if a1 == self.last_x:
+                self.past_reward[n, t] -= self.staying_penalty
+        self.last_x = a1
+        
         # update counters
         self.t += 1
 
@@ -361,7 +373,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         
         # compute reward after finishing drawing
         if self.reward_mode == 'l2':
-            R = l2_loss * -1.0
+            R = -l2_loss
         elif self.reward_mode == 'dcgan':
             y_fake = self.discriminator(self.fake_data[n])
             R = np_softplus(y_fake.data).data[0, 0]

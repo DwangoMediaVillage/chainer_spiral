@@ -39,35 +39,37 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('processes', type=int)
     parser.add_argument('--brush_info_file')
-    parser.add_argument('--logger_level', type=int, default=logging.DEBUG)
+    parser.add_argument('--logger_level', type=int, default=logging.INFO)
     parser.add_argument('--outdir', type=str, default='results',
                             help='Directory path to save output files.'
                                 ' If it does not exist, it will be created.')
     parser.add_argument('--seed', type=int, default=0,
                         help='Random seed [0, 2 ** 32)')
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--weight_decay', type=float, default=0.0)
-    parser.add_argument('--steps', type=int, default=100)
-    parser.add_argument('--eval_interval', type=int, default=10)
-    parser.add_argument('--eval_n_runs', type=int, default=2)
+    parser.add_argument('--steps', type=int, default=1000000)
+    parser.add_argument('--eval_interval', type=int, default=100)
+    parser.add_argument('--eval_n_runs', type=int, default=1)
     parser.add_argument('--load', type=str, default='')
     parser.add_argument('--demo')
-    parser.add_argument('--rollout_n', type=int, default=2)
+    parser.add_argument('--rollout_n', type=int, default=5)
     parser.add_argument('--profile', action='store_true')
-    parser.add_argument('--gamma', type=float, default=0.9)
+    parser.add_argument('--gamma', type=float, default=1.0)
     parser.add_argument('--beta', type=float, default=1e-2)
     parser.add_argument('--gp_lambda', type=float, default=10.0)
-    parser.add_argument('--continuous_drawing_lambda', type=float, default=0.1)
-    parser.add_argument('--empty_drawing_penalty', type=float, default=1.0)
-    parser.add_argument('--max_episode_steps', type=int, default=5)
-    parser.add_argument('--save_global_step_interval', type=int, default=10)
+    parser.add_argument('--continuous_drawing_lambda', type=float, default=0.0)
+    parser.add_argument('--empty_drawing_penalty', type=float, default=10.0)
+    parser.add_argument('--max_episode_steps', type=int, default=3)
+    parser.add_argument('--save_global_step_interval', type=int, default=1000)
     parser.add_argument('--lambda_R', type=float, default=1.0)
     parser.add_argument('--gumbel_tmp', type=float, default=0.1)
     parser.add_argument('--reward_mode', default='l2')
-    parser.add_argument('--save_final_obs_update_interval', type=int, default=10)
+    parser.add_argument('--save_final_obs_update_interval', type=int, default=100)
     parser.add_argument('--mnist_target_label', type=int)
     parser.add_argument('--problem', default='toy')
     parser.add_argument('--mnist_binarization',type=bool, default=False)
+    parser.add_argument('--demo_savename')
+    parser.add_argument('--staying_penalty', type=float, default=0.0)
     args = parser.parse_args()
     print_args(args)
 
@@ -79,7 +81,7 @@ def main():
         arg_log = os.path.abspath(
             os.path.join(args.load, os.pardir, 'args.txt')
         )
-        args = load_args(args, arg_log, exceptions=('load', 'demo'))
+        args = load_args(args, arg_log, exceptions=('load', 'demo', 'demo_savename'))
         logging.info('Load arguments: ')
         print_args(args)
 
@@ -161,7 +163,8 @@ def main():
         reward_mode=args.reward_mode,
         save_final_obs_update_interval=args.save_final_obs_update_interval,
         outdir=args.outdir,
-        save_final_obs=save_final_obs
+        save_final_obs=save_final_obs,
+        staying_penalty=args.staying_penalty
     )
 
     # load from a snapshot
@@ -173,16 +176,19 @@ def main():
         from spiral_evaluator import run_demo
         env = make_env(0, True)
 
-        savedir = args.load if args.load else args.outdir
-        
-        if args.demo in 'static':
-            savename = os.path.join(savedir, 'static_result.png')
-        elif args.demo == 'movie':
-            savename = os.path.join(savedir, 'movie_result.mp4')
-        elif args.demo == 'many':
-            savename = os.path.join(savedir, 'many_result.png')
+        if args.demo_savename:
+            savename = args.demo_savename
         else:
-            raise NotImplementedError('Invalid demo mode')
+            savedir = args.load if args.load else args.outdir
+        
+            if args.demo in 'static':
+                savename = os.path.join(savedir, 'static_result.png')
+            elif args.demo == 'movie':
+                savename = os.path.join(savedir, 'movie_result.mp4')
+            elif args.demo == 'many':
+                savename = os.path.join(savedir, 'many_result.png')
+            else:
+                raise NotImplementedError('Invalid demo mode')
         
         run_demo(args.demo, env, agent, args.max_episode_steps, savename, args.load)
     

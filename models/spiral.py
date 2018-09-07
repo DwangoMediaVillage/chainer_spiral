@@ -219,7 +219,8 @@ class SpiralToyDiscriminator(chainer.Chain):
 
 class ToyPolicyNet(chainer.Chain):
     def __init__(self, imsize):
-        self.f = F.relu
+        self.f = F.sigmoid
+        self.g = F.sigmoid
         super().__init__()
         with self.init_scope():
             self.e1_c1 = L.Linear(imsize * imsize, 30)
@@ -239,6 +240,7 @@ class ToyPolicyNet(chainer.Chain):
 
     def __call__(self, obs):
         o_c, o_a1, o_a2 = obs
+
         h_a1 = self.f(self.e1_a1(o_a1))
         h_a2 = self.f(self.e1_a2(o_a2))
         h_a = F.concat((h_a1, h_a2), axis=1)
@@ -251,28 +253,29 @@ class ToyPolicyNet(chainer.Chain):
         # decoder part
         z1 = h
         h_z1 = F.reshape(z1, (1, 8, 3, 3))
-        h_z1 = F.sigmoid(self.d_c1(h_z1))
-        h_z1 = F.sigmoid(self.d_c2(h_z1))
-        h_z1 = F.sigmoid(self.d_c3(h_z1))
-        h_z1 = F.sigmoid(self.d_c4(h_z1))
+        h_z1 = self.g(self.d_c1(h_z1))
+        h_z1 = self.g(self.d_c2(h_z1))
+        h_z1 = self.g(self.d_c3(h_z1))
+        h_z1 = self.g(self.d_c4(h_z1))
         h_z1 = F.expand_dims(F.flatten(h_z1), 0)
         p1 = D.Categorical(logit=h_z1)
         a1 = p1.sample(1).data  # sampling
 
         # decode prob
-        h_a1 = F.sigmoid(self.d_l1(a1.astype(np.float32)))
+        h_a1 = self.g(self.d_l1(a1.astype(np.float32)))
         h_a1 = F.concat((z1, h_a1), axis=1)
-        z2 = F.sigmoid(self.d_l2(h_a1))
+        z2 = self.g(self.d_l2(h_a1))
 
-        h = F.sigmoid(self.d_l3(z2))
+        h = self.d_l3(z2)
         p2 = D.Categorical(logit=h)
         a2 = p2.sample(1).data  # sampling
+
         return p1, p2, a1[0, 0], a2[0, 0]
 
     
 class ToyValueNet(chainer.Chain):
     def __init__(self, imsize):
-        self.f = F.relu
+        self.f = F.sigmoid
         super().__init__()
         with self.init_scope():
             self.e1_c1 = L.Linear(imsize * imsize, 10)
