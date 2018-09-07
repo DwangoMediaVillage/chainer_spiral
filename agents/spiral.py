@@ -336,6 +336,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # create action dictionary to the env
         action = self.pack_action(a1, a2)
 
+        if self.process_idx == 0:
+            logger.debug("Taking action %s", action)
+
         # update counters
         self.t += 1
 
