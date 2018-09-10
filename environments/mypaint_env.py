@@ -21,7 +21,7 @@ class MyPaintEnv(gym.Env):
         'render.modes': ['human', 'rgb_array'],
     }
 
-    def __init__(self, logger=None, imsize=64, bg_color=None, max_episode_steps=10, pos_resolution=32, brush_info_file=None):
+    def __init__(self, logger=None, imsize=64, bg_color=None, max_episode_steps=10, pos_resolution=32, brush_info_file=None, start_x=0):
         """ initialize environment """
         super().__init__()
 
@@ -34,7 +34,7 @@ class MyPaintEnv(gym.Env):
 
         # starting positing of the pen for each episode
         self.tile_offset = mypaintlib.TILE_SIZE
-        self.start_x = 0
+        self.start_x = start_x
         self.start_color = (0, 0, 0)  # initial color of the brush
         self.imsize = imsize
         self.pos_resolution = pos_resolution
