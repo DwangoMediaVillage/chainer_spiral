@@ -110,10 +110,11 @@ def main():
         obs_pos_dim = imsize * imsize
 
     elif args.problem == 'mnist':
-        imsize = 8
+        imsize = 64
+        pos_resolution = 32
         def make_env(process_idx, test):
             env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
-                            imsize=imsize, pos_resolution=imsize, brush_info_file=args.brush_info_file)
+                            imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
             return env
         if args.mnist_target_label:
             _, data_sampler = get_mnist(imsize=imsize, single_class=True, target_label=args.mnist_target_label, bin=args.mnist_binarization)

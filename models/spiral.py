@@ -39,12 +39,13 @@ class AutoregressiveDecoder(chainer.Chain):
         super().__init__()
         with self.init_scope():
             # location
-            self.l1_c1 = L.Convolution2D(8, 16, ksize=3, pad=1)
-            self.l1_c2 = L.Convolution2D(16, 16, ksize=3, pad=1)
-            self.l1_c3 = L.Deconvolution2D(16, 16, ksize=4, stride=2, pad=1)
-            self.l1_c4 = L.Convolution2D(16, 1, ksize=4, stride=1, pad=1)
+            self.l1_c1 = L.Deconvolution2D(64, 32, stride=2, ksize=4, pad=1)
+            self.l1_c2 = L.Deconvolution2D(32, 16, stride=2, ksize=4, pad=1)
+            self.l1_c3 = L.Deconvolution2D(16, 8, stride=2, ksize=4, pad=1)
+            self.l1_c4 = L.Deconvolution2D(8, 8, stride=2, ksize=4, pad=1)
+            self.l1_c5 = L.Convolution2D(8, 1, stride=1, ksize=3, pad=1)
             self.l1_l1 = L.Linear(1, 16)
-            self.l1_l2 = L.Linear(144, self.z_size)
+            self.l1_l2 = L.Linear(272, self.z_size)
 
             # prob
             self.l2_l1 = L.Linear(self.z_size, 2)
@@ -52,11 +53,12 @@ class AutoregressiveDecoder(chainer.Chain):
     def __call__(self, z):
         # decode location
         z1 = z
-        h = F.reshape(z1, (1, 8, 4, 4))
+        h = F.reshape(z1, (1, 64, 2, 2))
         h = self.f(self.l1_c1(h))
         h = self.f(self.l1_c2(h))
         h = self.f(self.l1_c3(h))
-        h = self.l1_c4(h)
+        h = self.f(self.l1_c4(h))
+        h = self.l1_c5(h)
         h = F.expand_dims(F.flatten(h), 0)
         p1 = SoftmaxDistribution(h)
         a1 = p1.sample()
@@ -79,10 +81,12 @@ class SpiralMnistDiscriminator(chainer.Chain):
         super().__init__()
         with self.init_scope():
             self.c1 = L.Convolution2D(1, 16, stride=1, ksize=3, pad=1)
-            self.c2 = L.Convolution2D(16, 16, stride=2, ksize=3, pad=1)
-            self.c3 = L.Convolution2D(16, 32, stride=1, ksize=2, pad=1)
-            self.c4 = L.Convolution2D(32, 48, stride=2, ksize=2, pad=1)
-            self.l5 = L.Linear(3 * 3 * 48, 1)
+            self.c2 = L.Convolution2D(16, 32, stride=2, ksize=3, pad=1)
+            self.c3 = L.Convolution2D(32, 48, stride=2, ksize=2, pad=1)
+            self.c4 = L.Convolution2D(48, 48, stride=2, ksize=2, pad=1)
+            self.c5 = L.Convolution2D(48, 64, stride=2, ksize=2, pad=1)
+            self.c6 = L.Convolution2D(64, 64, stride=2, ksize=2, pad=1)
+            self.l7 = L.Linear(8 * 8 * 64, 1)
         
     def __call__(self, x):
         self.x = x
@@ -90,11 +94,17 @@ class SpiralMnistDiscriminator(chainer.Chain):
         self.h2 = F.leaky_relu(self.c2(self.h1))
         self.h3 = F.leaky_relu(self.c3(self.h2))
         self.h4 = F.leaky_relu(self.c4(self.h3))
-        return self.l5(self.h4)
+        self.h5 = F.leaky_relu(self.c5(self.h4))
+        self.h6 = F.leaky_relu(self.c6(self.h5))
+        return self.l7(self.h6)
                 
     def differentiable_backward(self, x):
-        g = bw_linear(self.h4, x, self.l5)
-        g = F.reshape(g, (x.shape[0], 48, 3, 3))
+        g = bw_linear(self.h6, x, self.l7)
+        g = F.reshape(g, (x.shape[0], 128, 8, 8))
+        g = bw_leaky_relu(self.h6, g, 0.2)
+        g = bw_convolution(self.h5, g, self.c6)
+        g = bw_leaky_relu(self.h5, g, 0.2)
+        g = bw_convolution(self.h4, g, self.c5)
         g = bw_leaky_relu(self.h4, g, 0.2)
         g = bw_convolution(self.h3, g, self.c4)
         g = bw_leaky_relu(self.h3, g, 0.2)
@@ -113,22 +123,23 @@ class MnistPolicyNet(chainer.Chain):
         super().__init__()
         with self.init_scope():
             # image encoding part
-            self.e1_c1 = L.Convolution2D(1, 16, ksize=3, pad=1)
+            self.e1_c1 = L.Convolution2D(1, 32, ksize=5)
             
             # action observation encoding part
-            self.e1_l1_a1 = L.Linear(1, 8)
-            self.e1_l1_a2 = L.Linear(1, 8)
+            self.e1_l1_a1 = L.Linear(1, 16)
+            self.e1_l1_a2 = L.Linear(1, 16)
 
             # convolution after concat
-            self.e2_c1 = L.Convolution2D(16, 16, stride=2, ksize=4, pad=1)
-            self.e2_c2 = L.Convolution2D(16, 16, stride=1, ksize=4, pad=1)
-            self.e2_l1 = L.Linear(144, 128)
+            self.e2_c1 = L.Convolution2D(32, 32, stride=2, ksize=4)
+            self.e2_c2 = L.Convolution2D(32, 32, stride=2, ksize=4)
+            self.e2_c3 = L.Convolution2D(32, 32, stride=2, ksize=4)
+            self.e2_l1 = L.Linear(800, 256)
             
             # lstm
-            self.lstm = L.LSTM(128, 128)
+            self.lstm = L.LSTM(256, 256)
 
             # decoding part
-            self.decoder = AutoregressiveDecoder(128)
+            self.decoder = AutoregressiveDecoder(256)
 
     def __call__(self, obs):
         o_c, o_a1, o_a2 = obs
@@ -140,9 +151,10 @@ class MnistPolicyNet(chainer.Chain):
 
         # reshape
         imshape = h_c.shape[2:]
-        h = h_c + F.reshape(F.tile(h_a, imshape), (1, 16) + imshape)
+        h = h_c + F.reshape(F.tile(h_a, imshape), (1, 32) + imshape)
         h = self.f(self.e2_c1(h))
         h = self.f(self.e2_c2(h))
+        h = self.f(self.e2_c3(h))
         h = F.expand_dims(F.flatten(h), 0)
         h = self.f(self.e2_l1(h))
         
@@ -160,18 +172,21 @@ class MnistValueNet(chainer.Chain):
         super().__init__()
         with self.init_scope():
             # image encoding part
-            self.e1_c1 = L.Convolution2D(1, 16, ksize=3, pad=1)
+            self.e1_c1 = L.Convolution2D(1, 32, ksize=5)
             
             # action observation encoding part
-            self.e1_l1_a1 = L.Linear(1, 8)
-            self.e1_l1_a2 = L.Linear(1, 8)
+            self.e1_l1_a1 = L.Linear(1, 16)
+            self.e1_l1_a2 = L.Linear(1, 16)
 
             # convolution after concat
-            self.e2_c1 = L.Convolution2D(16, 16, stride=2, ksize=4, pad=1)
-            self.e2_c2 = L.Convolution2D(16, 16, stride=1, ksize=4, pad=1)
+            self.e2_c1 = L.Convolution2D(32, 32, stride=2, ksize=4)
+            self.e2_c2 = L.Convolution2D(32, 32, stride=2, ksize=4)
+            self.e2_c3 = L.Convolution2D(32, 32, stride=2, ksize=4)
+            self.e2_l1 = L.Linear(800, 128)
             
-            self.lstm = L.LSTM(144, 144)
-            self.e2_l1 = L.Linear(144, 1)
+            # lstm
+            self.lstm = L.LSTM(128, 128)
+            self.d1_l1 = L.Linear(128, 1)
 
     def __call__(self, obs):
         o_c, o_a1, o_a2 = obs
@@ -183,12 +198,14 @@ class MnistValueNet(chainer.Chain):
 
         # reshape
         imshape = h_c.shape[2:]
-        h = h_c + F.reshape(F.tile(h_a, imshape), (1, 16) + imshape)
+        h = h_c + F.reshape(F.tile(h_a, imshape), (1, 32) + imshape)
         h = self.f(self.e2_c1(h))
         h = self.f(self.e2_c2(h))
+        h = self.f(self.e2_c3(h))
         h = F.expand_dims(F.flatten(h), 0)
+        h = self.f(self.e2_l1(h))
         h = self.lstm(h)
-        h = self.e2_l1(h)
+        h = self.d1_l1(h)
         return h
 
 
@@ -287,6 +304,7 @@ class ToyValueNet(chainer.Chain):
         h = self.lstm(h)
         h = self.e2_l2(h)
         return h
+
 
 class SpiralMnistModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixin):
     """ Model for mnist drawing """
