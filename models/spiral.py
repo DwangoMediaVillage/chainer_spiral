@@ -86,7 +86,7 @@ class SpiralMnistDiscriminator(chainer.Chain):
             self.c4 = L.Convolution2D(48, 48, stride=2, ksize=2, pad=1)
             self.c5 = L.Convolution2D(48, 64, stride=2, ksize=2, pad=1)
             self.c6 = L.Convolution2D(64, 64, stride=2, ksize=2, pad=1)
-            self.l7 = L.Linear(8 * 8 * 64, 1)
+            self.l7 = L.Linear(3 * 3 * 64, 1)
         
     def __call__(self, x):
         self.x = x
@@ -100,7 +100,7 @@ class SpiralMnistDiscriminator(chainer.Chain):
                 
     def differentiable_backward(self, x):
         g = bw_linear(self.h6, x, self.l7)
-        g = F.reshape(g, (x.shape[0], 128, 8, 8))
+        g = F.reshape(g, (x.shape[0], 64, 3, 3))
         g = bw_leaky_relu(self.h6, g, 0.2)
         g = bw_convolution(self.h5, g, self.c6)
         g = bw_leaky_relu(self.h5, g, 0.2)
