@@ -5,7 +5,8 @@ import numpy as np
 import subprocess
 
 def extract_num(filename):
-    n = filename.split('.')[0].split('_')[-1]
+    basename = os.path.basename(filename)
+    n = basename.split('.')[0].split('_')[-1]
     n = int(n)
     return n
 
