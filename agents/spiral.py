@@ -67,22 +67,35 @@ def np_softplus(x):
 class ImageDrawer(object):
     def __init__(self, n, imsize=64):
         self.fig = plt.figure(figsize=(7, 7))
-        gs = gridspec.GridSpec(n, 1)
-        self.ims = []
-        for i in range(n):
+        gs = gridspec.GridSpec(n, 2)
+        self.ims_real = []
+        self.ims_fake = []
+        self.n = n
+        for i in range(self.n):
+            # target data (fake data)
             ax = plt.subplot(gs[i, 0])
             im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray')
             ax.set_xticks([])
             ax.set_yticks([])
-            self.ims.append(im)
-    
+            self.ims_fake.append(im)
+            if i == 0:
+                ax.set_title('Fake data')
 
-    def draw_and_save(self, imgs, figname, n):
-        for i, im in enumerate(self.ims):
-            im.set_data(imgs[i][0, 0])
-        self.fig.suptitle(f"Update = {n}")
+            # generated data (real data)
+            ax = plt.subplot(gs[i, 1])
+            im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            self.ims_real.append(im)
+            if i == 0:
+                ax.set_title('Real data')
+
+    def draw_and_save(self, fake_data, real_data, figname, update):
+        for i in range(self.n):
+            self.ims_fake[i].set_data(fake_data[i][0, 0])
+            self.ims_real[i].set_data(real_data[i][0, 0].data)
+        self.fig.suptitle(f"Update = {update}")
         plt.savefig(figname)
-
 
 class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     """ SPIRAL: Synthesizing Programs for Images using Reinforced Adversarial Learning.
@@ -431,7 +444,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             figname = "obs_update_{}.png".format(self.update_n)
             figname = os.path.join(self.outdir_final_obs, figname)
             logger.debug('Saving final observation as %s', figname)
-            self.image_drawer.draw_and_save(self.fake_data, figname, self.update_n)
+            self.image_drawer.draw_and_save(self.fake_data, self.real_data, figname, self.update_n)
+
 
         self.__reset_buffers()
         self.__reset_flags()
