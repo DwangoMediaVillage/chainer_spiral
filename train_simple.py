@@ -70,6 +70,7 @@ def main():
     parser.add_argument('--mnist_binarization',type=bool, default=False)
     parser.add_argument('--demo_savename')
     parser.add_argument('--staying_penalty', type=float, default=0.0)
+    parser.add_argument('--conditional', action='store_true')
     args = parser.parse_args()
     print_args(args)
 
@@ -97,6 +98,7 @@ def main():
     # define func to create env, target data sampler, and models
     # TODO: MyPaintEnv is not wrapped by EnvSpec
     if args.problem == 'toy':
+
         imsize = 3
         def make_env(process_idx, test):
             env = ToyEnv(imsize)
@@ -104,8 +106,8 @@ def main():
 
         _, data_sampler = get_toydata(imsize)
 
-        gen = SpiralToyModel(imsize)
-        dis = SpiralToyDiscriminator(imsize)
+        gen = SpiralToyModel(imsize, args.conditional)
+        dis = SpiralToyDiscriminator(imsize, args.conditional)
         in_channel = 1
         obs_pos_dim = imsize * imsize
 
@@ -121,8 +123,8 @@ def main():
         else:
             _, data_sampler = get_mnist(imsize=imsize, bin=args.mnist_binarization)
         
-        gen = SpiralMnistModel(imsize)
-        dis = SpiralMnistDiscriminator(imsize)
+        gen = SpiralMnistModel(imsize, args.conditional)
+        dis = SpiralMnistDiscriminator(imsize, args.conditional)
         in_channel = 1
         obs_pos_dim = imsize * imsize
 
@@ -155,6 +157,7 @@ def main():
         timestep_limit=args.max_episode_steps,
         rollout_n=args.rollout_n,
         obs_pos_dim=obs_pos_dim,
+        conditional=args.conditional,
         gamma=args.gamma,
         beta=args.beta,
         gp_lambda=args.gp_lambda,

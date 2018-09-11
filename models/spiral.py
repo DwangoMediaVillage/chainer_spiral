@@ -76,11 +76,13 @@ class AutoregressiveDecoder(chainer.Chain):
 
 
 class SpiralMnistDiscriminator(chainer.Chain):
-    def __init__(self, imsize):
+    def __init__(self, imsize, conditional):
         self.imsize = imsize
+        self.conditional = conditional
         super().__init__()
         with self.init_scope():
-            self.c1 = L.Convolution2D(1, 16, stride=1, ksize=3, pad=1)
+            in_channel = 2 if self.conditional else 1
+            self.c1 = L.Convolution2D(in_channel, 16, stride=1, ksize=3, pad=1)
             self.c2 = L.Convolution2D(16, 32, stride=2, ksize=3, pad=1)
             self.c3 = L.Convolution2D(32, 48, stride=2, ksize=2, pad=1)
             self.c4 = L.Convolution2D(48, 48, stride=2, ksize=2, pad=1)
@@ -88,8 +90,12 @@ class SpiralMnistDiscriminator(chainer.Chain):
             self.c6 = L.Convolution2D(64, 64, stride=2, ksize=2, pad=1)
             self.l7 = L.Linear(3 * 3 * 64, 1)
         
-    def __call__(self, x):
-        self.x = x
+    def __call__(self, x, conditional_input=None):
+        if self.conditional:
+            self.x = F.concat((x, conditional_input), axis=1)
+        else:
+            self.x = x
+
         self.h1 = F.leaky_relu(self.c1(self.x))
         self.h2 = F.leaky_relu(self.c2(self.h1))
         self.h3 = F.leaky_relu(self.c3(self.h2))
@@ -117,13 +123,15 @@ class SpiralMnistDiscriminator(chainer.Chain):
 
 
 class MnistPolicyNet(chainer.Chain):
-    def __init__(self, imsize):
+    def __init__(self, imsize, conditional):
         self.imsize = imsize
         self.f = F.relu  # activation func for encoding part
+        self.conditional = conditional
         super().__init__()
         with self.init_scope():
             # image encoding part
-            self.e1_c1 = L.Convolution2D(1, 32, ksize=5)
+            in_channel = 2 if self.conditional else 1
+            self.e1_c1 = L.Convolution2D(in_channel, 32, ksize=5)
             
             # action observation encoding part
             self.e1_l1_a1 = L.Linear(1, 16)
@@ -141,8 +149,13 @@ class MnistPolicyNet(chainer.Chain):
             # decoding part
             self.decoder = AutoregressiveDecoder(256)
 
-    def __call__(self, obs):
+    def __call__(self, obs, conditional_input=None):
         o_c, o_a1, o_a2 = obs
+        
+        if self.conditional:
+            # concat image obs and conditional image input
+            o_c = F.concat((o_c, conditional_input), axis=1)
+
         # image encoding part
         h_a1 = self.f(self.e1_l1_a1(o_a1))
         h_a2 = self.f(self.e1_l1_a1(o_a2))
@@ -166,13 +179,15 @@ class MnistPolicyNet(chainer.Chain):
 
 
 class MnistValueNet(chainer.Chain):
-    def __init__(self, imsize):
+    def __init__(self, imsize, conditional):
         self.imsize = imsize
         self.f = F.relu  # activation func for encoding part
+        self.conditional = conditional
         super().__init__()
         with self.init_scope():
             # image encoding part
-            self.e1_c1 = L.Convolution2D(1, 32, ksize=5)
+            in_channel = 2 if self.conditional else 1
+            self.e1_c1 = L.Convolution2D(in_channel, 32, ksize=5)
             
             # action observation encoding part
             self.e1_l1_a1 = L.Linear(1, 16)
@@ -188,9 +203,14 @@ class MnistValueNet(chainer.Chain):
             self.lstm = L.LSTM(128, 128)
             self.d1_l1 = L.Linear(128, 1)
 
-    def __call__(self, obs):
+    def __call__(self, obs, conditional_input=None):
         o_c, o_a1, o_a2 = obs
         # image encoding part
+        
+        if self.conditional:
+            # concat image obs and conditional image input
+            o_c = F.concat((o_c, conditional_input), axis=1)
+
         h_a1 = self.f(self.e1_l1_a1(o_a1))
         h_a2 = self.f(self.e1_l1_a1(o_a2))
         h_a = F.concat((h_a1, h_a2), axis=1)
@@ -210,16 +230,22 @@ class MnistValueNet(chainer.Chain):
 
 
 class SpiralToyDiscriminator(chainer.Chain):
-    def __init__(self, imsize):
+    def __init__(self, imsize, conditional):
         self.imsize = imsize
+        self.conditional = conditional
         super().__init__()
         with self.init_scope():
-            self.l1 = L.Convolution2D(1, 3, stride=1, ksize=2)
+            in_channel = 2 if self.conditional else 1
+            self.l1 = L.Convolution2D(in_channel, 3, stride=1, ksize=2)
             self.l2 = L.Linear(12, 5)
             self.l3 = L.Linear(5, 1)
 
-    def __call__(self, x):
-        self.x = x
+    def __call__(self, x, conditional_input=None):
+        if self.conditional:
+            self.x = F.concat((x, conditional_input), axis=1)
+        else:
+            self.x = x
+
         self.h1 = F.leaky_relu(self.l1(self.x))
         self.h2 = F.leaky_relu(self.l2(self.h1))
         return self.l3(self.h2)
@@ -235,12 +261,14 @@ class SpiralToyDiscriminator(chainer.Chain):
 
 
 class ToyPolicyNet(chainer.Chain):
-    def __init__(self, imsize):
+    def __init__(self, imsize, conditional):
         self.f = F.sigmoid
         self.g = F.sigmoid
+        self.conditional = conditional
         super().__init__()
         with self.init_scope():
-            self.e1_c1 = L.Linear(imsize * imsize, 30)
+            in_size = imsize * imsize * 2 if self.conditional else imsize * imsize
+            self.e1_c1 = L.Linear(in_size, 30)
             self.e1_a1 = L.Linear(1, 15)
             self.e1_a2 = L.Linear(1, 15)
             self.e2_l1 = L.Linear(30, 30)
@@ -253,8 +281,12 @@ class ToyPolicyNet(chainer.Chain):
             self.d_a2_l2 = L.Linear(10, 2)
 
 
-    def __call__(self, obs):
+    def __call__(self, obs, conditional_input):
         o_c, o_a1, o_a2 = obs
+
+        if self.conditional:
+            # concat image obs and conditional image input
+            o_c = F.concat((o_c, conditional_input), axis=1)
 
         h_a1 = self.f(self.e1_a1(o_a1))
         h_a2 = self.f(self.e1_a2(o_a2))
@@ -280,11 +312,13 @@ class ToyPolicyNet(chainer.Chain):
 
     
 class ToyValueNet(chainer.Chain):
-    def __init__(self, imsize):
+    def __init__(self, imsize, conditional):
         self.f = F.sigmoid
+        self.conditional = conditional
         super().__init__()
         with self.init_scope():
-            self.e1_c1 = L.Linear(imsize * imsize, 10)
+            in_size = imsize * imsize * 2 if self.conditional else imsize * imsize
+            self.e1_c1 = L.Linear(in_size, 10)
             self.e1_a1 = L.Linear(1, 5)
             self.e1_a2 = L.Linear(1, 5)
 
@@ -293,8 +327,13 @@ class ToyValueNet(chainer.Chain):
             self.e2_l2 = L.Linear(10, 1)
 
     
-    def __call__(self, obs):
+    def __call__(self, obs, conditional_input):
         o_c, o_a1, o_a2 = obs
+
+        if self.conditional:
+            # concat image obs and conditional image input
+            o_c = F.concat((o_c, conditional_input), axis=1)
+
         h_a1 = self.f(self.e1_a1(o_a1))
         h_a2 = self.f(self.e1_a2(o_a2))
         h_a = F.concat((h_a1, h_a2), axis=1)
@@ -308,27 +347,27 @@ class ToyValueNet(chainer.Chain):
 
 class SpiralMnistModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixin):
     """ Model for mnist drawing """
-    def __init__(self, imsize):
+    def __init__(self, imsize, conditional):
         # define policy and value networks
-        self.pi = MnistPolicyNet(imsize)
-        self.v = MnistValueNet(imsize)
+        self.pi = MnistPolicyNet(imsize, conditional)
+        self.v = MnistValueNet(imsize, conditional)
         super().__init__(self.pi, self.v)
     
-    def pi_and_v(self, state):
+    def pi_and_v(self, state, conditional_input=None):
         """ forwarding single step """
-        return self.pi(state), self.v(state)
+        return self.pi(state, conditional_input), self.v(state, conditional_input)
 
 
 class SpiralToyModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixin):
     """ A simple model """
-    def __init__(self, imsize):
+    def __init__(self, imsize, conditional):
         # define policy and value networks
-        self.pi = ToyPolicyNet(imsize)
-        self.v = ToyValueNet(imsize)
+        self.pi = ToyPolicyNet(imsize, conditional)
+        self.v = ToyValueNet(imsize, conditional)
         super().__init__(self.pi, self.v)
     
-    def pi_and_v(self, state):
+    def pi_and_v(self, state, conditional_input=None):
         """ forwarding single step """
-        return self.pi(state), self.v(state)
+        return self.pi(state, conditional_input), self.v(state, conditional_input)
 
     

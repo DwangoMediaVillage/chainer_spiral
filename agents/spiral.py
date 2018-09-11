@@ -94,10 +94,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         discriminator (chainer.Chain): Discriminator
         gen_optimizer (chainer.Optimizer): optimizer to train generator
         dis_optimizer (chainer.Optimizer): optimizer to train discriminator
-        target_data_sample (func): function to feed a batch
+        target_data_sampler (func): function to feed a batch
         in_chanel (int): channel of images
         timestep_limit (int): time step length of each drawing process
         rollout_n (int): number of times to rollout the generation process before updating
+        obs_pos_dim (int): dimensional size of positional action vector
+        conditional (bool): IF true, the models are assumed to generate / discriminate images with conditional input
         act_deterministically (bool): If set true, the agent chooses the most probable actions in act()
         gamma (float): discount factor [0, 1]
         beta (float): weight coefficient for the entropy regularization term
@@ -107,6 +109,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         empty_drawing_penalty (float): size of negative reward for drawing nothing
         use_wgangp (bool): If true, the discriminator is trained as WGAN-GP
         lambda_R (float): Scaling parameter of rewards by discriminator
+        reward_mode (string): method to compute a reward at the end of drawing
+        save_final_obs_update_interval (int): number of weight update interval to save the final observation images as a png image.
+        outdir (string): the directory to save the final observation images.
+        save_final_obs (bool): If true, agent saves the final observation images
+        staying_penalty (float): positive value to represent size of the negative reward to penalize staying at the same point
     """
     
     process_idx = None
@@ -119,6 +126,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  timestep_limit,
                  rollout_n,
                  obs_pos_dim,
+                 conditional,
                  act_deterministically=False,
                  gamma=0.9,
                  beta=1e-2,
@@ -156,6 +164,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.timestep_limit = timestep_limit  # time step length of each episode
         self.rollout_n = rollout_n
         self.obs_pos_dim = obs_pos_dim  # dim size of the position input
+        self.conditional = conditional
 
         self.act_deterministically = act_deterministically
         self.gamma = gamma
@@ -227,6 +236,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.fake_data = {}
         self.y_fake = {}
         self.last_x = None
+        if self.conditional:
+            self.past_conditional_input = {}
 
     def __reset_stats(self):
         """ reset interval buffers for statistics """
@@ -295,16 +306,25 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     def act_and_train(self, obs, r):
         """ Infer action from the observation at each step """
 
+        # get local time step at each episode
+        n, t = self.__get_local_time()
+
+        if self.conditional and t == 0:
+            # set the conditional input data
+            self.past_conditional_input[n] = self.target_data_sampler()
+
         # parse observation
         state = self.process_obs(obs)
 
         # infer by the current policy
         # a1 is position, a2 is the prob to draw line or not
-        pout, vout = self.generator.pi_and_v(state)
-        p1, p2, a1, a2 = pout
+        if self.conditional:
+            pout, vout = self.generator.pi_and_v(state, self.past_conditional_input[n])
+        else:
+            # unconditional generation
+            pout, vout = self.generator.pi_and_v(state)
 
-        # get local time step at each episode
-        n, t = self.__get_local_time()
+        p1, p2, a1, a2 = pout
 
         if self.process_idx == 0:
             logger.debug("act_and_train at step %s, local_step %s, local_episode %s", self.t, t, n)
@@ -362,7 +382,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # store fake data and a paired target data sampled by target data sampler
         n = (self.t - 1) // self.timestep_limit  # number of local episode
         self.fake_data[n] = self.__process_image(image)
-        self.real_data[n] = self.target_data_sampler()
+        
+        if self.conditional:
+            self.real_data[n] = self.past_conditional_input[n]
+        else:
+            self.real_data[n] = self.target_data_sampler()
 
         # compute L2 loss between target data and drawn picture by the agent
         l2_loss = F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
@@ -374,17 +398,19 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # compute reward after finishing drawing
         if self.reward_mode == 'l2':
             R = -l2_loss
-        elif self.reward_mode == 'dcgan':
-            y_fake = self.discriminator(self.fake_data[n])
-            R = np_softplus(y_fake.data).data[0, 0]
-            self.y_fake[n] = y_fake
-        elif self.reward_mode == 'wgangp':
-            y_fake = self.discriminator(self.fake_data[n])
-            R = y_fake.data[0, 0]
-            self.y_fake[n] = y_fake
         else:
-            raise NotImplementedError()
-    
+            conditional_input = self.past_conditional_input[n] if self.conditional else None
+            if self.reward_mode == 'dcgan':
+                y_fake = self.discriminator(self.fake_data[n], conditional_input)
+                R = np_softplus(y_fake.data).data[0, 0]
+                self.y_fake[n] = y_fake
+            elif self.reward_mode == 'wgangp':
+                y_fake = self.discriminator(self.fake_data[n], conditional_input)
+                R = y_fake.data[0, 0]
+                self.y_fake[n] = y_fake
+            else:
+                raise NotImplementedError()
+
         # store reward to the buffer
         if self.process_idx == 0:
             logger.debug('compute final reward = %s at local_episode %s', R, n)
@@ -469,7 +495,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             x_fake = F.concat(self.fake_data.values(), axis=0)
             x_real = F.concat(self.real_data.values(), axis=0)
             y_fake = F.concat(self.y_fake.values())
-            y_real = self.discriminator(x_real)
+            
+            if self.conditional:
+                y_real = self.discriminator(x_real, x_real)
+            else:
+                y_real = self.discriminator(x_real)
+
             self.__compute_discriminator_grad(x_real, x_fake, y_real, y_fake)
             
             # copy the gradients of the local discriminator to the globall shared model
@@ -507,7 +538,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             x_mid = eps * x_real + (1.0 - eps) * x_fake
 
             x_mid_v = chainer.Variable(x_mid.data)
-            y_mid = self.discriminator(x_mid_v)
+            if self.conditional:
+                y_mid = self.discriminator(x_mid_v, x_mid_v)
+            else:
+                y_mid = self.discriminator(x_mid_v)
+
             dydx = self.discriminator.differentiable_backward(np.ones_like(y_mid.data))
             dydx = F.sqrt(F.sum(dydx ** 2, axis=(1, 2, 3)))
             loss_gp = self.gp_lamda * F.mean_squared_error(dydx, np.ones_like(dydx.data))
@@ -583,7 +618,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     def act(self, obs):
         with chainer.no_backprop_mode():
             state = self.process_obs(obs)
-            pout, _ = self.generator.pi_and_v(state)
+
+            if self.conditional:
+                conditional_input = self.target_data_sampler()
+                pout, _ = self.generator.pi_and_v(state, conditional_input)
+            else:
+                pout, _ = self.generator.pi_and_v(state)
+
             p1, p2, a1, a2 = pout
 
             if self.act_deterministically:
