@@ -108,7 +108,7 @@ def main():
             env = ToyEnv(imsize)
             return env
 
-        _, data_sampler = get_toydata(imsize)
+        _, data_sampler = get_toydata(imsize, multi_pattern=args.conditional)
 
         gen = SpiralToyModel(imsize, args.conditional)
         dis = SpiralToyDiscriminator(imsize, args.conditional)
