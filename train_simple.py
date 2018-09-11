@@ -77,6 +77,10 @@ def main():
     # init a logger
     logging.basicConfig(level=args.logger_level)
 
+    # check the steps argument is correct
+    if args.steps % (args.rollout_n * args.max_episode_steps) != 0:
+        logging.warn('steps % (rollout_n * max_episode_steps steps) != 0, so that the training will end with error!')
+
     # load arguments from the load directory
     if args.demo and args.load:
         arg_log = os.path.abspath(

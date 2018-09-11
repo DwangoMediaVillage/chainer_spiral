@@ -25,6 +25,6 @@ python_version = "3.7"
 [scripts]
 test = "nosetests tests"
 random = "python random_drawing.py"
-debug = "python train_simple.py 1 --rollout_n 2 --eval_interval 5 --max_episode_steps 3 --steps 30 --save_final_obs_update_interval 1"
+debug = "python train_simple.py 1 --rollout_n 3 --eval_interval 6 --max_episode_steps 3 --steps 36 --save_final_obs_update_interval 1 --logger_level 10"
 train = "python train_simple.py 2"
 log = "python utils/plot_scores.py"

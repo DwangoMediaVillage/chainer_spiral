@@ -437,6 +437,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.generator.reset_state()
 
     def stop_episode_and_train(self, obs, r, done=None):
+        if self.process_idx == 0:
+            # get local time step at each episode
+            n, t = self.__get_local_time()
+            logger.debug('==== update at local episode %s, local step %s', n, t)
         self.__update()
 
         # saving the final observation images as png
