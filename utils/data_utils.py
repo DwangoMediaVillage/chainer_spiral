@@ -11,7 +11,7 @@ def single_class_filter(xs, label):
 
 def get_mnist(imsize=64, single_class=False, target_label=None, bin=False):
     """ maybe download mnist dataset, and returns single class data if specified """
-    train, _ = chainer.datasets.get_mnist(withlabel=True)
+    train, _ = chainer.datasets.get_mnist(withlabel=True, ndim=2)
     
     if single_class:
         assert not target_label is None
@@ -22,13 +22,15 @@ def get_mnist(imsize=64, single_class=False, target_label=None, bin=False):
     train_iter = chainer.iterators.SerialIterator(train, 1)
 
     def target_data_sampler():
-        y = train_iter.next()[0].data
-        y = np.reshape(y, (28, 28))
+        """ returns an image batch """
+        y = train_iter.next()[0] * 255.0
+        y = y.astype(np.uint8)
         y = cv2.resize(y, (imsize, imsize))
         if bin:
-            thresh = 0.5
+            thresh = 255 / 2.0
             _, y = cv2.threshold(y, thresh, 1.0, cv2.THRESH_BINARY)
-        y = np.reshape(y, (1, 1, imsize, imsize))
+        y = np.reshape(y, (1, 1, imsize, imsize)) / 255.0
+        y = y.astype(np.float32)
         y = 1.0 - y  # background: black -> white
         return chainer.Variable(y)
 

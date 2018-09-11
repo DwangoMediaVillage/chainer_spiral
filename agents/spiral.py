@@ -74,7 +74,8 @@ class ImageDrawer(object):
         for i in range(self.n):
             # target data (fake data)
             ax = plt.subplot(gs[i, 0])
-            im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray')
+            # origin of Cairo backend is different from gtk backend !!
+            im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray', origin='lower')
             ax.set_xticks([])
             ax.set_yticks([])
             self.ims_fake.append(im)
@@ -83,7 +84,7 @@ class ImageDrawer(object):
 
             # generated data (real data)
             ax = plt.subplot(gs[i, 1])
-            im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray')
+            im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray', origin='lower')
             ax.set_xticks([])
             ax.set_yticks([])
             self.ims_real.append(im)
@@ -93,7 +94,7 @@ class ImageDrawer(object):
     def draw_and_save(self, fake_data, real_data, figname, update):
         for i in range(self.n):
             self.ims_fake[i].set_data(fake_data[i][0, 0])
-            self.ims_real[i].set_data(real_data[i][0, 0].data)
+            self.ims_real[i].set_data(real_data[i].data[0, 0])
         self.fig.suptitle(f"Update = {update}")
         plt.savefig(figname)
 
@@ -400,7 +401,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             self.real_data[n] = self.past_conditional_input[n]
         else:
             self.real_data[n] = self.target_data_sampler()
-
+            
         # compute L2 loss between target data and drawn picture by the agent
         l2_loss = F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
         if n == 0:
@@ -449,7 +450,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             figname = os.path.join(self.outdir_final_obs, figname)
             logger.debug('Saving final observation as %s', figname)
             self.image_drawer.draw_and_save(self.fake_data, self.real_data, figname, self.update_n)
-
 
         self.__reset_buffers()
         self.__reset_flags()
