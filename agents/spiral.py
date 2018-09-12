@@ -108,7 +108,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         discriminator (chainer.Chain): Discriminator
         gen_optimizer (chainer.Optimizer): optimizer to train generator
         dis_optimizer (chainer.Optimizer): optimizer to train discriminator
-        target_data_sampler (func): function to feed a batch
+        dataset (chainer.dataset.DatasetMixin): dataset to feed a batch data to this agent
         in_chanel (int): channel of images
         timestep_limit (int): time step length of each drawing process
         rollout_n (int): number of times to rollout the generation process before updating
@@ -135,7 +135,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
     def __init__(self, generator, discriminator,
                  gen_optimizer, dis_optimizer,
-                 target_data_sampler,
+                 dataset,
                  in_channel,
                  timestep_limit,
                  rollout_n,
@@ -172,7 +172,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         self.gen_optimizer = gen_optimizer
         self.dis_optimizer = dis_optimizer
-        self.target_data_sampler = target_data_sampler
+        self.dataset = dataset
         self.in_channel = in_channel # image chanel of inputs to the model
 
         self.timestep_limit = timestep_limit  # time step length of each episode
@@ -325,7 +325,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         if self.conditional and t == 0:
             # set the conditional input data
-            self.past_conditional_input[n] = self.target_data_sampler()
+            self.past_conditional_input[n] = self.dataset.get_example()
 
         # parse observation
         state = self.process_obs(obs)
@@ -393,14 +393,14 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
     def compute_reward(self, image):
         """ compute the reward by the discriminator at the end of drawing """
-        # store fake data and a paired target data sampled by target data sampler
+        # store fake data and a paired target data sampled from the dataset
         n = (self.t - 1) // self.timestep_limit  # number of local episode
         self.fake_data[n] = self.__process_image(image)
         
         if self.conditional:
             self.real_data[n] = self.past_conditional_input[n]
         else:
-            self.real_data[n] = self.target_data_sampler()
+            self.real_data[n] = self.dataset.get_example()
             
         # compute L2 loss between target data and drawn picture by the agent
         l2_loss = F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
@@ -639,7 +639,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
             if self.conditional:
                 if conditional_input is None:
-                    conditional_input = self.target_data_sampler()
+                    conditional_input = self.dataset.get_example(train=False)
                 pout, _ = self.generator.pi_and_v(state, conditional_input)
             else:
                 pout, _ = self.generator.pi_and_v(state)

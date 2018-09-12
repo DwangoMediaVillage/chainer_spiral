@@ -4,6 +4,7 @@ from agents import spiral
 from models.spiral import SpiralToyDiscriminator, SpiralToyModel
 from environments import ToyEnv
 from chainerrl.optimizers import rmsprop_async
+from dataset.toy_dataset import ToyDataset
 
 def init_agent():
     # initialize an agent
@@ -15,6 +16,8 @@ def init_agent():
     D_opt = rmsprop_async.RMSpropAsync()
     G_opt.setup(G)
     D_opt.setup(D)
+    p = [(1, 4, 7)]
+    dataset = ToyDataset(imsize, p, p)
     def target_data_sampler():
         pass
     agent = spiral.SPIRAL(
@@ -23,7 +26,7 @@ def init_agent():
         gen_optimizer=G_opt,
         dis_optimizer=D_opt,
         in_channel=1,
-        target_data_sampler=target_data_sampler,
+        dataset=dataset,
         timestep_limit=3,
         rollout_n=1,
         obs_pos_dim=imsize ** 2,

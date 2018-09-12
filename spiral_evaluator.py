@@ -105,13 +105,14 @@ def run_single_episode(env, agent, max_episode_steps, conditional_input=None):
     return obs, act
 
 
-def run_episode(env, agent, N, max_episode_steps, conditional=False, data_sampler=None):
+def run_episode(env, agent, N, max_episode_steps, conditional=False, dataset=None):
     """ rollout N times with agent and env until max_episode steps for each episode. """
     obs, act = [], []
     if conditional: cond_inputs = []
     for n in range(N):
         if conditional:
-            conditional_input = data_sampler()
+            # get untrained image data as a conditional input
+            conditional_input = dataset.get_example(train=False)
             o, a = run_single_episode(env, agent, max_episode_steps, conditional_input=conditional_input)
         else:
             o, a = run_single_episode(env, agent, max_episode_steps)
@@ -125,14 +126,14 @@ def run_episode(env, agent, N, max_episode_steps, conditional=False, data_sample
         return obs, act
 
 
-def demo_static(env, agent, args, savename, suptitle, data_sampler, n_row=5, plot_act=True):
+def demo_static(env, agent, args, savename, suptitle, dataset, n_row=5, plot_act=True):
     """ render drawn picture and lines colored by ordering """
     fig = plt.figure(figsize=(7, 7))
     if args.conditional:
         # conditional generation
         gs = gridspec.GridSpec(n_row, 3)
         obs, act, cond = run_episode(env, agent, n_row, args.max_episode_steps, 
-                                conditional=True, data_sampler=data_sampler)
+                                conditional=True, dataset=dataset)
         for n in range(n_row):
             # conditional input
             ax_cond = plt.subplot(gs[n, 0])
@@ -176,7 +177,7 @@ def demo_static(env, agent, args, savename, suptitle, data_sampler, n_row=5, plo
     fig.suptitle(suptitle)
     plt.savefig(savename)
 
-def demo_movie(env, agent, args, savename, suptitle, data_sampler, n_row=5, plot_act=True):
+def demo_movie(env, agent, args, savename, suptitle, dataset, n_row=5, plot_act=True):
     """ render movie of drawn picture, final observation, and lines colored by ordering """
     fig = plt.figure(figsize=(7, 7))
     ims = []
@@ -184,7 +185,7 @@ def demo_movie(env, agent, args, savename, suptitle, data_sampler, n_row=5, plot
         # conditional generation
         gs = gridspec.GridSpec(n_row, 4)
         obs, act, cond = run_episode(env, agent, n_row, args.max_episode_steps, 
-                                conditional=True, data_sampler=data_sampler)
+                                conditional=True, dataset=dataset)
         for n in range(n_row):
             # conditional input
             ax_cond = plt.subplot(gs[n, 0])
@@ -246,14 +247,14 @@ def demo_movie(env, agent, args, savename, suptitle, data_sampler, n_row=5, plot
     ani.save(savename)
 
 
-def demo_many(env, agent, args, savename, suptitle, data_sampler, n_row=10, n_col=5):
+def demo_many(env, agent, args, savename, suptitle, dataset, n_row=10, n_col=5):
     """ render many final observations """
     fig = plt.figure(figsize=(7, 7))
     if args.conditional:
         # conditional generation
         gs = gridspec.GridSpec(n_row, n_col * 2)
         obs, act, cond = run_episode(env, agent, n_row * n_col, args.max_episode_steps, 
-                                conditional=True, data_sampler=data_sampler)
+                                conditional=True, dataset=dataset)
         n = 0
         for i in range(n_row):
             for j in range(0, n_col, 2):

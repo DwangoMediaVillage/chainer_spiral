@@ -30,7 +30,8 @@ from environments import MyPaintEnv, ToyEnv
 from agents import spiral
 from utils.arg_utils import load_args, print_args
 from utils.stat_utils import get_model_param_sum
-from utils.data_utils import get_mnist, get_toydata
+from dataset.mnist_dataset import MnistDataset
+from dataset.toy_dataset import ToyDataset
 from models.spiral import SpiralMnistModel, SpiralToyModel, SpiralMnistDiscriminator, SpiralToyDiscriminator
 
 def main():
@@ -66,7 +67,7 @@ def main():
     parser.add_argument('--save_final_obs_update_interval', type=int, default=100)
     parser.add_argument('--mnist_target_label', type=int)
     parser.add_argument('--problem', default='toy')
-    parser.add_argument('--mnist_binarization',type=bool, default=False)
+    parser.add_argument('--mnist_binarization', action='store_true')
     parser.add_argument('--demo_savename')
     parser.add_argument('--staying_penalty', type=float, default=0.0)
     parser.add_argument('--conditional', action='store_true')
@@ -101,14 +102,24 @@ def main():
     # define func to create env, target data sampler, and models
     # TODO: MyPaintEnv is not wrapped by EnvSpec
     if args.problem == 'toy':
-
         imsize = 3
+
         def make_env(process_idx, test):
             env = ToyEnv(imsize)
             return env
 
-        _, data_sampler = get_toydata(imsize, multi_pattern=args.conditional)
+        if args.conditional:
+            train_patterns = [
+                (1, 4, 7), (0, 1, 2), (3, 4, 5), (2, 5, 8)
+            ]
+            test_patterns = [
+                (6, 7, 8)
+            ]
+        else:
+            train_patterns = [(1, 4, 7)]
+            test_patterns = train_patterns
 
+        dataset = ToyDataset(imsize, train_patterns, test_patterns)
         gen = SpiralToyModel(imsize, args.conditional)
         dis = SpiralToyDiscriminator(imsize, args.conditional)
         in_channel = 1
@@ -117,15 +128,17 @@ def main():
     elif args.problem == 'mnist':
         imsize = 64
         pos_resolution = 32
+
         def make_env(process_idx, test):
             env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
                             imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
             return env
+
         if args.mnist_target_label is not None:
-            _, data_sampler = get_mnist(imsize=imsize, single_class=True, target_label=args.mnist_target_label, bin=args.mnist_binarization)
+            dataset = MnistDataset(imsize, True, args.mnist_target_label, args.mnist_binarization)
         else:
-            _, data_sampler = get_mnist(imsize=imsize, bin=args.mnist_binarization)
-        
+            dataset = MnistDataset(imsize, False, binarization=args.mnist_binarization)
+
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)
         in_channel = 1
@@ -156,7 +169,7 @@ def main():
         gen_optimizer=gen_opt,
         dis_optimizer=dis_opt,
         in_channel=in_channel,
-        target_data_sampler=data_sampler,
+        dataset=dataset,
         timestep_limit=args.max_episode_steps,
         rollout_n=args.rollout_n,
         obs_pos_dim=obs_pos_dim,
@@ -200,11 +213,11 @@ def main():
 
         # run demo
         if args.demo == 'static':
-            demo_static(env, agent, args, savename, suptitle, data_sampler, plot_act=args.problem != 'toy')
+            demo_static(env, agent, args, savename, suptitle, dataset, plot_act=args.problem != 'toy')
         elif args.demo == 'movie':
-            demo_movie(env, agent, args, savename, suptitle, data_sampler, plot_act=args.problem != 'toy')
+            demo_movie(env, agent, args, savename, suptitle, dataset, plot_act=args.problem != 'toy')
         elif args.demo == 'many':
-            demo_many(env, agent, args, savename, suptitle, data_sampler)
+            demo_many(env, agent, args, savename, suptitle, dataset)
         else:
             raise NotImplementedError('Invalid demo mode')
     
