@@ -181,15 +181,14 @@ def main():
 
     if args.demo:
         # demo mode
-        from spiral_evaluator import run_demo
+        from spiral_evaluator import demo_static, demo_movie, demo_many
         env = make_env(0, True)
 
         if args.demo_savename:
             savename = args.demo_savename
         else:
             savedir = args.load if args.load else args.outdir
-        
-            if args.demo in 'static':
+            if args.demo == 'static':
                 savename = os.path.join(savedir, 'static_result.png')
             elif args.demo == 'movie':
                 savename = os.path.join(savedir, 'movie_result.mp4')
@@ -197,8 +196,18 @@ def main():
                 savename = os.path.join(savedir, 'many_result.png')
             else:
                 raise NotImplementedError('Invalid demo mode')
-        
-        run_demo(args.demo, env, agent, args.max_episode_steps, savename, args.load)
+
+        suptitle = args.load if args.load else args.outdir
+
+        # run demo
+        if args.demo == 'static':
+            demo_static(env, agent, args, savename, suptitle, data_sampler, plot_act=args.problem != 'toy')
+        elif args.demo == 'movie':
+            demo_movie(env, agent, args, savename, suptitle, data_sampler, plot_act=args.problem != 'toy')
+        elif args.demo == 'many':
+            demo_many(env, agent, args, savename, suptitle, data_sampler)
+        else:
+            raise NotImplementedError('Invalid demo mode')
     
     else:
         # training mode

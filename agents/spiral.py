@@ -633,12 +633,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.generator.reset_state()
 
 
-    def act(self, obs):
+    def act(self, obs, conditional_input=None):
         with chainer.no_backprop_mode():
             state = self.process_obs(obs)
 
             if self.conditional:
-                conditional_input = self.target_data_sampler()
+                if conditional_input is None:
+                    conditional_input = self.target_data_sampler()
                 pout, _ = self.generator.pi_and_v(state, conditional_input)
             else:
                 pout, _ = self.generator.pi_and_v(state)
