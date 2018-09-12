@@ -1,25 +1,33 @@
 from nose.tools import eq_
 import os
 from agents import spiral
-from models.spiral import SpiralDiscriminator, SPIRALSimpleModel
-from environments import MyPaintEnv
+from models.spiral import SpiralToyDiscriminator, SpiralToyModel
+from environments import ToyEnv
 from chainerrl.optimizers import rmsprop_async
 
 def init_agent():
     # initialize an agent
-    env = MyPaintEnv()
-    in_channel = 1
-    G = SPIRALSimpleModel(env.observation_space, env.action_space, in_channel)
-    D = SpiralDiscriminator(in_channel)
+    imsize = 3
+    env = ToyEnv(imsize)
+    G = SpiralToyModel(imsize, False)
+    D = SpiralToyDiscriminator(imsize, False)
     G_opt = rmsprop_async.RMSpropAsync()
     D_opt = rmsprop_async.RMSpropAsync()
     G_opt.setup(G)
     D_opt.setup(D)
-    def data_sampler():
+    def target_data_sampler():
         pass
-    rollout_n = 1
-    timestep_limit = env.tags['max_episode_steps']
-    agent = spiral.SPIRAL(G, D, G_opt, D_opt, data_sampler, in_channel, timestep_limit, rollout_n)
+    agent = spiral.SPIRAL(
+        generator=G,
+        discriminator=D,
+        gen_optimizer=G_opt,
+        dis_optimizer=D_opt,
+        in_channel=1,
+        target_data_sampler=target_data_sampler,
+        timestep_limit=3,
+        rollout_n=1,
+        obs_pos_dim=imsize ** 2,
+        conditional=False)
     return agent
 
 def test_save_and_load():
@@ -33,9 +41,9 @@ def test_save_and_load():
     agent = init_agent()
 
     # insert some value to the generator
-    w = agent.generator.pi.conv2.W.data
+    w = agent.generator.pi.e1_c1.W.data
     w = w * 10
-    agent.generator.pi.conv2.W.data = w
+    agent.generator.pi.e1_c1.W.data = w
 
     # save agent to save_dir
     agent.snap(0, save_dir)
@@ -47,4 +55,4 @@ def test_save_and_load():
     # load parameters from the snap
     agent.load(os.path.join(save_dir, '0'))
 
-    eq_(agent.generator.pi.conv2.W.data.sum(), w.sum())
+    eq_(agent.generator.pi.e1_c1.W.data.sum(), w.sum())

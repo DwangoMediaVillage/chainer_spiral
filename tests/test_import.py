@@ -20,4 +20,5 @@ def test_import_spiral():
     from agents.spiral import SPIRALModel, SPIRAL
 
     # try to import spiral models
-    from models.spiral import SPIRALSimpleModel, SpiralDiscriminator
+    from models.spiral import SpiralToyModel, SpiralToyDiscriminator
+    from models.spiral import SpiralMnistModel, SpiralMnistDiscriminator

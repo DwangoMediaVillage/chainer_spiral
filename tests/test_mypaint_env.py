@@ -55,8 +55,8 @@ def test_env_point_conversion():
 
     # idx pos_resolution ** 2 is right bottom
     x, y = env.convert_x(pos_resolution * pos_resolution - 1)
-    eq_(x, env.tile_offset + imsize)
-    eq_(y, env.tile_offset + imsize)
+    eq_(x, env.tile_offset + imsize - 2)
+    eq_(y, env.tile_offset + imsize - 2)
     
 
 if __name__ == '__main__':
