@@ -122,7 +122,7 @@ def main():
             env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
                             imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
             return env
-        if args.mnist_target_label:
+        if args.mnist_target_label is not None:
             _, data_sampler = get_mnist(imsize=imsize, single_class=True, target_label=args.mnist_target_label, bin=args.mnist_binarization)
         else:
             _, data_sampler = get_mnist(imsize=imsize, bin=args.mnist_binarization)
