@@ -20,8 +20,8 @@ class ToyEnv(gym.Env):
         # action_space
         self.action_space = gym.spaces.Dict({
             'position': gym.spaces.Discrete(self.imsize ** 2),
-            'pressure': gym.spaces.Box(low=0, high=1.0, shape=()),
-            'color': gym.spaces.Box(low=0, high=1.0, shape=(3,)),
+            'pressure': gym.spaces.Box(low=0, high=1.0, shape=(), dtype=float),
+            'color': gym.spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
             'prob': gym.spaces.Discrete(2)
         })        
 
@@ -29,8 +29,8 @@ class ToyEnv(gym.Env):
         self.observation_space = gym.spaces.Dict({
             'image': gym.spaces.Box(low=0, high=255, shape=(self.imsize, self.imsize, 3), dtype=np.uint8),
             'position': gym.spaces.Discrete(self.imsize ** 2),
-            'pressure': gym.spaces.Box(low=0, high=1.0, shape=()),
-            'color': gym.spaces.Box(low=0, high=1.0, shape=(3,)),
+            'pressure': gym.spaces.Box(low=0, high=1.0, shape=(), dtype=float),
+            'color': gym.spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
             'prob': gym.spaces.Discrete(1)
         })
 
