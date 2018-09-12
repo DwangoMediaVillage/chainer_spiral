@@ -3,11 +3,11 @@ from nose.tools import eq_
 
 def test_init_env():
     # initialize environment
-    env = MyPaintEnv()
+    env = MyPaintEnv(brush_info_file='settings/my_simple_brush.myb')
 
 def test_reset_env():
     # canvas can be cleaned
-    env = MyPaintEnv()
+    env = MyPaintEnv(brush_info_file='settings/my_simple_brush.myb')
     
     obs = env.reset()
     tmp = obs['image'].sum()
@@ -26,7 +26,7 @@ def test_reset_env():
 
 def test_env_after_reset():
     # nothing will be drawn with prob=0 even after reset
-    env = MyPaintEnv()
+    env = MyPaintEnv(brush_info_file='settings/my_simple_brush.myb')
     obs = env.reset()
     tmp = obs['image'].sum()
 
@@ -46,7 +46,7 @@ def test_env_after_reset():
 def test_env_point_conversion():
     pos_resolution = 32
     imsize = 64
-    env = MyPaintEnv(pos_resolution=pos_resolution, imsize=imsize)
+    env = MyPaintEnv(pos_resolution=pos_resolution, imsize=imsize, brush_info_file='settings/my_simple_brush.myb')
 
     # idx 0 is left top
     x, y = env.convert_x(0)
