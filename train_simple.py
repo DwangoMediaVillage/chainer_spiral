@@ -103,6 +103,8 @@ def main():
     # TODO: MyPaintEnv is not wrapped by EnvSpec
     if args.problem == 'toy':
         imsize = 3
+        in_channel = 1
+        obs_pos_dim = imsize * imsize
 
         def make_env(process_idx, test):
             env = ToyEnv(imsize)
@@ -122,12 +124,40 @@ def main():
         dataset = ToyDataset(imsize, train_patterns, test_patterns)
         gen = SpiralToyModel(imsize, args.conditional)
         dis = SpiralToyDiscriminator(imsize, args.conditional)
-        in_channel = 1
-        obs_pos_dim = imsize * imsize
+
+        def preprocess_image(x):
+            """ function to preprocess image from observation """
+            x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
+            x = x.astype(np.float32) / 255.0
+            x = np.reshape(x, [1, 1] + list(x.shape))
+            return x
+
+        def preprocess_obs(obs):
+            """ function to preprocess observation from ToyEnv """
+            c = obs['image']
+            x = obs['position']
+            q = obs['prob']
+
+            # image
+            c = preprocess_image(c)
+
+            # position
+            x /= float(obs_pos_dim)
+            x = np.asarray(x, dtype=np.float32) 
+            x = np.reshape(x, (1, 1))
+
+            # prob
+            q = np.asarray(q, dtype=np.float32)
+            q = np.reshape(q, (1, 1))
+            
+            # return state as a tuple
+            return c, x, q
 
     elif args.problem == 'mnist':
         imsize = 64
+        in_channel = 1
         pos_resolution = 32
+        obs_pos_dim = imsize * imsize
 
         def make_env(process_idx, test):
             env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
@@ -141,8 +171,34 @@ def main():
 
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)
-        in_channel = 1
-        obs_pos_dim = imsize * imsize
+
+        def preprocess_image(x):
+            """ function to preprocess image from observation """
+            x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
+            x = x.astype(np.float32) / 255.0
+            x = np.reshape(x, [1, 1] + list(x.shape))
+            return x
+
+        def preprocess_obs(obs):
+            """ function to preprocess observation from MyPaintEnv with MNIST (black and white images) """
+            c = obs['image']
+            x = obs['position']
+            q = obs['prob']
+
+            # image
+            c = preprocess_image(c)
+
+            # position
+            x /= float(obs_pos_dim)
+            x = np.asarray(x, dtype=np.float32) 
+            x = np.reshape(x, (1, 1))
+
+            # prob
+            q = np.asarray(q, dtype=np.float32)
+            q = np.reshape(q, (1, 1))
+            
+            # return state as a tuple
+            return c, x, q
 
     else:
         raise NotImplementedError()
@@ -170,6 +226,8 @@ def main():
         dis_optimizer=dis_opt,
         in_channel=in_channel,
         dataset=dataset,
+        preprocess_image_func=preprocess_image,
+        preprocess_obs_func=preprocess_obs,
         timestep_limit=args.max_episode_steps,
         rollout_n=args.rollout_n,
         obs_pos_dim=obs_pos_dim,

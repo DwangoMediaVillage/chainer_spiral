@@ -20,6 +20,13 @@ def init_agent():
     dataset = ToyDataset(imsize, p, p)
     def target_data_sampler():
         pass
+
+    def preprocess_image_func():
+        pass
+    
+    def preprocess_obs_func():
+        pass
+    
     agent = spiral.SPIRAL(
         generator=G,
         discriminator=D,
@@ -27,6 +34,8 @@ def init_agent():
         dis_optimizer=D_opt,
         in_channel=1,
         dataset=dataset,
+        preprocess_image_func=preprocess_image_func,
+        preprocess_obs_func=preprocess_obs_func,
         timestep_limit=3,
         rollout_n=1,
         obs_pos_dim=imsize ** 2,

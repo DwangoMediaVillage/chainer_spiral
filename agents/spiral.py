@@ -136,6 +136,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     def __init__(self, generator, discriminator,
                  gen_optimizer, dis_optimizer,
                  dataset,
+                 preprocess_image_func,
+                 preprocess_obs_func,
                  in_channel,
                  timestep_limit,
                  rollout_n,
@@ -173,6 +175,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.gen_optimizer = gen_optimizer
         self.dis_optimizer = dis_optimizer
         self.dataset = dataset
+
+        self.preprocess_image = preprocess_image_func
+        self.preprocess_obs = preprocess_obs_func
+
         self.in_channel = in_channel # image chanel of inputs to the model
 
         self.timestep_limit = timestep_limit  # time step length of each episode
@@ -274,33 +280,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         self.update_n = 0   # number of updates
 
-    def process_obs(self, obs):
-        c = obs['image']
-        x = obs['position']
-        q = obs['prob']
-
-        # image
-        c = self.__process_image(c)
-
-        # position
-        x /= float(self.obs_pos_dim)
-        x = np.asarray(x, dtype=np.float32) 
-        x = np.reshape(x, (1, 1))
-
-        # prob
-        q = np.asarray(q, dtype=np.float32)
-        q = np.reshape(q, (1, 1))
-
-        return c, x, q
-    
-    def __process_image(self, image):
-        if self.in_channel == 1:
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
-            image = image.astype(np.float32) / 255.0
-            image = np.reshape(image, [1, 1] + list(image.shape))
-        else:
-            raise NotImplementedError("not implemented in case of channel != 1")
-        return  image
     
     def pack_action(self, x, q):
         return {'position': x,
@@ -328,7 +307,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             self.past_conditional_input[n] = self.dataset.get_example()
 
         # parse observation
-        state = self.process_obs(obs)
+        state = self.preprocess_obs(obs)
 
         # infer by the current policy
         # a1 is position, a2 is the prob to draw line or not
@@ -395,7 +374,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         """ compute the reward by the discriminator at the end of drawing """
         # store fake data and a paired target data sampled from the dataset
         n = (self.t - 1) // self.timestep_limit  # number of local episode
-        self.fake_data[n] = self.__process_image(image)
+        self.fake_data[n] = self.preprocess_image(image)
         
         if self.conditional:
             self.real_data[n] = self.past_conditional_input[n]
@@ -635,7 +614,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
     def act(self, obs, conditional_input=None):
         with chainer.no_backprop_mode():
-            state = self.process_obs(obs)
+            state = self.preprocess_obs(obs)
 
             if self.conditional:
                 if conditional_input is None:
