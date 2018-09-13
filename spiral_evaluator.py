@@ -74,6 +74,8 @@ def plot_action(ax, act, T, init_obs, convert_pos_func, lw=2.0):
         # convert discrite position index -> (x, y)
         x, y = convert_pos_func(pos)
 
+        y *= -1
+
         # may draw a line
         if prob:
             ax.plot([last_x, x], [last_y, y], color=color, lw=lw)
@@ -162,7 +164,7 @@ def demo_static(env, agent, args, savename, suptitle, dataset, n_row=5, plot_act
         for n in range(n_row):
             # final obs
             ax_obs = plt.subplot(gs[n, 0])
-            ax_obs.imshow(obs[n][args.max_episode_steps]['image'], origin=None)
+            ax_obs.imshow(obs[n][args.max_episode_steps]['image'], origin='lower')
             set_axis_prop(ax_obs)
             if n == 0: ax_obs.set_title('Final observation')
             
