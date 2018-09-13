@@ -347,6 +347,7 @@ def main():
     else:
         observation_saver = None
 
+    # init an spiral agent
     agent = spiral.SPIRAL(
         generator=gen,
         discriminator=dis,
