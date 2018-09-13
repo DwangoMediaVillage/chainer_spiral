@@ -17,6 +17,10 @@ import numpy as np
 import chainer
 import cv2
 
+import matplotlib; matplotlib.use('Cairo')
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+
 import gym
 gym.undo_logger_setup()  # NOQA
 import gym.wrappers
@@ -58,7 +62,6 @@ def main():
     parser.add_argument('--gamma', type=float, default=1.0)
     parser.add_argument('--beta', type=float, default=1e-2)
     parser.add_argument('--gp_lambda', type=float, default=10.0)
-    parser.add_argument('--continuous_drawing_lambda', type=float, default=0.0)
     parser.add_argument('--empty_drawing_penalty', type=float, default=10.0)
     parser.add_argument('--max_episode_steps', type=int, default=3)
     parser.add_argument('--save_global_step_interval', type=int, default=1000)
@@ -70,6 +73,7 @@ def main():
     parser.add_argument('--mnist_binarization', action='store_true')
     parser.add_argument('--demo_savename')
     parser.add_argument('--staying_penalty', type=float, default=0.0)
+    parser.add_argument('--continuous_drawing_penalty', type=float, default=0.0)
     parser.add_argument('--conditional', action='store_true')
     args = parser.parse_args()
     print_args(args)
@@ -153,6 +157,46 @@ def main():
             # return state as a tuple
             return c, x, q
 
+        def pack_action(act):
+            a1, a2 = act  # sampled actions by policy net
+            return {'position': int(a1.data),
+                    'pressure': 1.0,
+                    'color': (0, 0, 0),
+                    'prob': int(a2.data)}
+
+        def compute_auxiliary_reward(past_reward, past_act, n_episode):
+
+            empty = True
+            drawing_steps = 0
+
+            tmp_a1, tmp_a2 = None, None
+
+            for t in range(args.max_episode_steps):
+                a1 = past_act[n_episode, t]['position']
+                a2 = past_act[n_episode, t]['prob']
+                
+                if empty and a2: 
+                    empty = False
+
+                if t > 0:
+                    if tmp_a2 and a2:
+                        drawing_steps += 1
+                    if not a2:
+                        drawing_steps = 0
+                    past_reward[n_episode, t] -= drawing_steps * args.continuous_drawing_penalty
+
+                    if tmp_a1 == a1:
+                        past_reward[n_episode, t] -= args.staying_penalty
+
+                tmp_a1 = a1
+                tmp_a2 = a2
+
+            if empty:
+                past_reward[n_episode, args.max_episode_steps - 1] -= args.empty_drawing_penalty
+            
+            return past_reward
+
+
     elif args.problem == 'mnist':
         imsize = 64
         in_channel = 1
@@ -200,6 +244,46 @@ def main():
             # return state as a tuple
             return c, x, q
 
+        def pack_action(act):
+            a1, a2 = act  # sampled actions by policy net
+            return {'position': int(a1.data),
+                    'pressure': 1.0,
+                    'color': (0, 0, 0),
+                    'prob': int(a2.data)}
+
+        def compute_auxiliary_reward(past_reward, past_act, n_episode):
+
+            empty = True
+            drawing_steps = 0
+
+            tmp_a1, tmp_a2 = None, None
+
+            for t in range(args.max_episode_steps):
+                a1 = past_act[n_episode, t]['position']
+                a2 = past_act[n_episode, t]['prob']
+                
+                if empty and a2: 
+                    empty = False
+
+                if t > 0:
+                    if tmp_a2 and a2:
+                        drawing_steps += 1
+                    if not a2:
+                        drawing_steps = 0
+                    past_reward[n_episode, t] -= drawing_steps * args.continuous_drawing_penalty
+
+                    if tmp_a1 == a1:
+                        past_reward[n_episode, t] -= args.staying_penalty
+
+                tmp_a1 = a1
+                tmp_a2 = a2
+
+            if empty:
+                past_reward[n_episode, args.max_episode_steps - 1] -= args.empty_drawing_penalty
+            
+            return past_reward
+
+
     else:
         raise NotImplementedError()
 
@@ -217,32 +301,70 @@ def main():
         dis_opt.add_hook(NonbiasWeightDecay(args.weight_decay))
 
     # initialize agent
-    save_final_obs = not args.demo
+    if not args.demo:
+        # class to save snapshot of generated and target images during the training
+        class ObservationSaver(object):
+            interval = args.save_final_obs_update_interval
+            def __init__(self):
+                # create directory to save png files
+                self.target_dir = os.path.join(args.outdir, 'final_obs')
+                if not os.path.exists(self.target_dir):
+                    os.mkdir(self.target_dir)
+
+                # init figure
+                self.fig = plt.figure(figsize=(7, 7))
+                gs = gridspec.GridSpec(args.rollout_n, 2)
+                self.ims_real, self.ims_fake = [], []
+                for n in range(args.rollout_n):
+                    ax = plt.subplot(gs[n, 0])
+                    self.ims_fake.append(
+                        ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray', origin='lower')
+                    )
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+                    if n == 0:
+                        ax.set_title('Fake data')
+
+                    ax = plt.subplot(gs[n, 1])
+                    self.ims_real.append(
+                        ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray', origin='lower')
+                    )
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+                    if n == 0:
+                        ax.set_title('Real data')
+
+            def save(self, fake_data, real_data, update_n):
+                for n in range(args.rollout_n):
+                    self.ims_fake[n].set_data(fake_data[n][0, 0])
+                    self.ims_real[n].set_data(real_data[n].data[0, 0])
+                self.fig.suptitle(f"Update = {update_n}")
+                savename = os.path.join(self.target_dir, f"obs_update_{update_n}.png")
+                plt.savefig(savename)
+
+        observation_saver = ObservationSaver()
+    else:
+        observation_saver = None
 
     agent = spiral.SPIRAL(
         generator=gen,
         discriminator=dis,
         gen_optimizer=gen_opt,
         dis_optimizer=dis_opt,
-        in_channel=in_channel,
         dataset=dataset,
         preprocess_image_func=preprocess_image,
         preprocess_obs_func=preprocess_obs,
+        pack_action_func=pack_action,
         timestep_limit=args.max_episode_steps,
         rollout_n=args.rollout_n,
-        obs_pos_dim=obs_pos_dim,
         conditional=args.conditional,
+        compute_auxiliary_reward_func=compute_auxiliary_reward,
         gamma=args.gamma,
         beta=args.beta,
         gp_lambda=args.gp_lambda,
-        continuous_drawing_lambda=args.continuous_drawing_lambda,
-        empty_drawing_penalty=args.empty_drawing_penalty,
         lambda_R=args.lambda_R,
         reward_mode=args.reward_mode,
-        save_final_obs_update_interval=args.save_final_obs_update_interval,
-        outdir=args.outdir,
-        save_final_obs=save_final_obs,
-        staying_penalty=args.staying_penalty
+        observation_saver=observation_saver
     )
 
     # load from a snapshot

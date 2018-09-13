@@ -23,11 +23,6 @@ from chainerrl.recurrent import RecurrentChainMixin
 from chainerrl.recurrent import state_kept
 from chainerrl.experiments.hooks import StepHook
 
-import cv2
-
-import matplotlib; matplotlib.use('Cairo')
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 
 logger = getLogger(__name__)
 
@@ -64,40 +59,6 @@ def np_softplus(x):
     return np.maximum(0, x) + np.log(1 + np.exp(-np.abs(-x)))
 
 
-class ImageDrawer(object):
-    def __init__(self, n, imsize=64):
-        self.fig = plt.figure(figsize=(7, 7))
-        gs = gridspec.GridSpec(n, 2)
-        self.ims_real = []
-        self.ims_fake = []
-        self.n = n
-        for i in range(self.n):
-            # target data (fake data)
-            ax = plt.subplot(gs[i, 0])
-            # origin of Cairo backend is different from gtk backend !!
-            im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray', origin='lower')
-            ax.set_xticks([])
-            ax.set_yticks([])
-            self.ims_fake.append(im)
-            if i == 0:
-                ax.set_title('Fake data')
-
-            # generated data (real data)
-            ax = plt.subplot(gs[i, 1])
-            im = ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray', origin='lower')
-            ax.set_xticks([])
-            ax.set_yticks([])
-            self.ims_real.append(im)
-            if i == 0:
-                ax.set_title('Real data')
-
-    def draw_and_save(self, fake_data, real_data, figname, update):
-        for i in range(self.n):
-            self.ims_fake[i].set_data(fake_data[i][0, 0])
-            self.ims_real[i].set_data(real_data[i].data[0, 0])
-        self.fig.suptitle(f"Update = {update}")
-        plt.savefig(figname)
-
 class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     """ SPIRAL: Synthesizing Programs for Images using Reinforced Adversarial Learning.
 
@@ -109,25 +70,25 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         gen_optimizer (chainer.Optimizer): optimizer to train generator
         dis_optimizer (chainer.Optimizer): optimizer to train discriminator
         dataset (chainer.dataset.DatasetMixin): dataset to feed a batch data to this agent
-        in_chanel (int): channel of images
+        preprocess_image_func (func): function to preprocess image observation from environment
+        preprocess_obs_func (func): function to preprocess whole of observation from environment
+        pack_action_func (func): function to create an input to the environment using inferred actions
         timestep_limit (int): time step length of each drawing process
         rollout_n (int): number of times to rollout the generation process before updating
-        obs_pos_dim (int): dimensional size of positional action vector
         conditional (bool): IF true, the models are assumed to generate / discriminate images with conditional input
+        compute_auxiliary_reward_func (func): function to compute auxiliary rewards
         act_deterministically (bool): If set true, the agent chooses the most probable actions in act()
         gamma (float): discount factor [0, 1]
         beta (float): weight coefficient for the entropy regularization term
+        average_entropy_decay (float): decay to compute moving average of entropy
+        average_value_decay (float): decay to compute moving average of value
         process_idx (int): Index of the process
         gp_lambda (float): scaling factor of the gradient penalty for WGAN-GP
-        continuous_drawing_lambda (float): scaling factor of additional reward to encourage continuous drawing
-        empty_drawing_penalty (float): size of negative reward for drawing nothing
-        use_wgangp (bool): If true, the discriminator is trained as WGAN-GP
+        pi_loss_coef (float): scaling factor of the loss for policy network
+        v_loss_coef (float): scaling factor of the loss for value network
         lambda_R (float): Scaling parameter of rewards by discriminator
-        reward_mode (string): method to compute a reward at the end of drawing
-        save_final_obs_update_interval (int): number of weight update interval to save the final observation images as a png image.
-        outdir (string): the directory to save the final observation images.
-        save_final_obs (bool): If true, agent saves the final observation images
-        staying_penalty (float): positive value to represent size of the negative reward to penalize staying at the same point
+        reward_mode (string): method to compute a reward at the end of drawing. 'l2', 'dcgan', or 'wgangp'.
+        observation_saver (object): class to take snapshots of generated image and the target image during training
     """
     
     process_idx = None
@@ -138,11 +99,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  dataset,
                  preprocess_image_func,
                  preprocess_obs_func,
-                 in_channel,
+                 pack_action_func,
                  timestep_limit,
                  rollout_n,
-                 obs_pos_dim,
                  conditional,
+                 compute_auxiliary_reward_func,
                  act_deterministically=False,
                  gamma=0.9,
                  beta=1e-2,
@@ -150,16 +111,11 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
                  average_value_decay=0.999,
                  process_idx=0,
                  gp_lambda=10.0,
-                 continuous_drawing_lambda=1.0,
-                 empty_drawing_penalty=1.0,
                  pi_loss_coef=1.0,
                  v_loss_coef=1.0,
                  lambda_R=1.0,
                  reward_mode='l2',
-                 save_final_obs_update_interval=10000,
-                 outdir=None,
-                 save_final_obs=False,
-                 staying_penalty=0.0):
+                 observation_saver=None):
 
         # globally shared model
         self.shared_generator = generator
@@ -175,57 +131,40 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.gen_optimizer = gen_optimizer
         self.dis_optimizer = dis_optimizer
         self.dataset = dataset
-
         self.preprocess_image = preprocess_image_func
         self.preprocess_obs = preprocess_obs_func
-
-        self.in_channel = in_channel # image chanel of inputs to the model
-
-        self.timestep_limit = timestep_limit  # time step length of each episode
+        self.pack_action = pack_action_func
+        self.timestep_limit = timestep_limit
         self.rollout_n = rollout_n
-        self.obs_pos_dim = obs_pos_dim  # dim size of the position input
         self.conditional = conditional
-
+        self.compute_auxiliary_reward = compute_auxiliary_reward_func
         self.act_deterministically = act_deterministically
         self.gamma = gamma
         self.beta = beta
-
+        self.average_entropy_decay = average_entropy_decay
+        self.average_value_decay = average_value_decay
         self.gp_lamda = gp_lambda
-
         self.pi_loss_coef = pi_loss_coef
         self.v_loss_coef = v_loss_coef
-
         self.lambda_R = lambda_R
-
-        self.continuous_drawing_lambda = continuous_drawing_lambda
-        
-        assert empty_drawing_penalty >= 0
-        self.empty_drawing_penalty = empty_drawing_penalty
-
-        assert staying_penalty >= 0
-        self.staying_penalty = staying_penalty
-
-        self.average_value_decay = average_value_decay
-        self.average_entropy_decay = average_entropy_decay
-        self.stat_average_value = 0.0
-        self.stat_average_entropy = 0.0
 
         assert reward_mode in ('l2', 'dcgan', 'wgangp')
         self.reward_mode = reward_mode
 
+        self.save_obs = False
+        if observation_saver is not None:
+            self.observation_saver = observation_saver
+            self.save_obs = True
+            self.save_final_obs_update_interval = self.observation_saver.interval
+
+        # initialize stat
+        self.stat_average_value = 0.0
+        self.stat_average_entropy = 0.0
+        self.update_n = 0   # number of updates
+
         self.__reset_flags()
         self.__reset_buffers()
         self.__reset_stats()
-
-        # initialize drawer to save the final observation
-        self.save_final_obs = save_final_obs
-        if self.save_final_obs:
-            self.image_drawer = ImageDrawer(self.rollout_n)
-            self.save_final_obs_update_interval = save_final_obs_update_interval
-            self.outdir_final_obs = os.path.join(outdir, 'final_obs')  # directory to save the final observation
-            if not os.path.exists(self.outdir_final_obs):
-                os.mkdir(self.outdir_final_obs)
-
 
     def sync_parameters(self):
         copy_param.copy_param(target_link=self.generator,
@@ -239,7 +178,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
     def __reset_flags(self):
         self.t = 0  # time step counter
-        self.continuous_drawing_step = 0
 
     def __reset_buffers(self):
         """ reset internal buffers """
@@ -247,7 +185,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.past_reward = np.zeros((self.rollout_n, self.timestep_limit))
 
         # sampled action to determine drawing or not from the previous point
-        self.past_brush_prob = {}
+        self.past_actions = {}
         self.past_action_entropy = {}
         self.past_action_log_prob = {}
         self.past_values = {}
@@ -278,15 +216,6 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         elif self.reward_mode == 'dcgan':
             self.stat_dis_acc = None
 
-        self.update_n = 0   # number of updates
-
-    
-    def pack_action(self, x, q):
-        return {'position': x,
-                'pressure': 1.0,
-                'color': (0.0, 0.0, 0.0),
-                'prob': q }
-
     def __get_local_time(self):
         n = self.t // self.timestep_limit
         if n  == 0:
@@ -295,79 +224,49 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             t = self.t % self.timestep_limit
         return n, t
 
-
     def act_and_train(self, obs, r):
-        """ Infer action from the observation at each step """
-
-        # get local time step at each episode
+        """ Infer action from the observation at each step, and compute auxiliary reward """
+        # get local time step at each episode: step t of n-th rollout
         n, t = self.__get_local_time()
 
+        # set the conditional input data
         if self.conditional and t == 0:
-            # set the conditional input data
             self.past_conditional_input[n] = self.dataset.get_example()
 
-        # parse observation
+        # preprocess observation
         state = self.preprocess_obs(obs)
 
-        # infer by the current policy
-        # a1 is position, a2 is the prob to draw line or not
+        # get probabilities, sampled actions, and value from the generator
         if self.conditional:
             pout, vout = self.generator.pi_and_v(state, self.past_conditional_input[n])
         else:
-            # unconditional generation
             pout, vout = self.generator.pi_and_v(state)
-
-        p1, p2, a1, a2 = pout
-
-        if self.process_idx == 0:
-            logger.debug("act_and_train at step %s, local_step %s, local_episode %s", self.t, t, n)
-
-        # calc additional reward during drawing process
-        if t > 0:
-            if self.past_brush_prob[n, t - 1] and int(a2.data):
-                self.continuous_drawing_step += 1
-            else:
-                self.continuous_drawing_step = 0
-
-        self.past_brush_prob[n, t] = int(a2.data)
-
-        if self.continuous_drawing_step > 0:
-            continuous_reward = self.continuous_drawing_lambda * 1.0 / self.continuous_drawing_step
-            self.past_reward[n, t] = continuous_reward
         
-        entropy = sum([ p.entropy for p in (p1, p2) ])
-        self.past_action_entropy[n, t] = entropy
+        prob, act = pout
 
-        log_prob = sum([ p.log_prob(a) for p, a in zip((p1, p2), (a1, a2))])
-        self.past_action_log_prob[n, t] = log_prob
-        
+        # put inferences to the buffer
+        self.past_action_entropy[n, t] = sum([ p.entropy for p in prob ])
+        self.past_action_log_prob[n, t] = sum([ p.log_prob(a) for p, a in zip(prob, act)])
         self.past_values[n, t] = vout
 
-        # update stats (average value and entropy )
+        # update stats (moving average of value and entropy)
         self.stat_average_value += (
-            (1 - self.average_value_decay) * 
-            (float(vout.data[0, 0]) - self.stat_average_value))
+            (1 - self.average_value_decay) * (float(vout.data[0, 0]) - self.stat_average_value))
         self.stat_average_entropy += (
-            (1 - self.average_entropy_decay) *
-            (float(entropy.data) - self.stat_average_entropy))
-        
-        # create action dictionary to the env
-        action = self.pack_action(int(a1.data), int(a2.data))
+            (1 - self.average_entropy_decay) * (float(self.past_action_entropy[n, t].data) - self.stat_average_entropy))
 
-        if self.process_idx == 0:
-            logger.debug("Taking action %s", action)
-
-        # check the last step's pos vs. current pos
-        # a1 is position
-        if t > 0:
-            if int(a1.data) == self.last_x:
-                self.past_reward[n, t] -= self.staying_penalty
-        self.last_x = int(a1.data)
-        
-        # update counters
+        # update counter
         self.t += 1
 
-        return action
+        # create action dictionary to the env
+        act = self.pack_action(act)
+        self.past_actions[n, t] = act
+
+        if self.process_idx == 0:
+            logger.debug('act_and_train at step %s, local step %s, local episode %s', self.t, t, n)
+            logger.debug('taking action %s', act)
+
+        return act
 
 
     def compute_reward(self, image):
@@ -407,28 +306,25 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # store reward to the buffer
         if self.process_idx == 0:
             logger.debug('compute final reward = %s at local_episode %s', R, n)
+        
         self.past_R[n] = R
 
-        # add negative reward if the agent did not draw anything
-        past_brush_prob = sum([ self.past_brush_prob[n, t] for t in range(self.timestep_limit) ])
-        if not past_brush_prob:
-            self.past_reward[n, self.timestep_limit - 1] -= self.empty_drawing_penalty
+        # compute auxiliary reward at the end of drawing process
+        self.past_reward = self.compute_auxiliary_reward(self.past_reward, self.past_actions, n)
 
+        # reset LSTM states
         self.generator.reset_state()
 
     def stop_episode_and_train(self, obs, r, done=None):
         if self.process_idx == 0:
             # get local time step at each episode
             n, t = self.__get_local_time()
-            logger.debug('==== update at local episode %s, local step %s', n, t)
+            logger.debug('update at local episode %s, local step %s', n, t)
         self.__update()
 
         # saving the final observation images as png
-        if self.process_idx ==0 and self.update_n % self.save_final_obs_update_interval == 0:
-            figname = "obs_update_{}.png".format(self.update_n)
-            figname = os.path.join(self.outdir_final_obs, figname)
-            logger.debug('Saving final observation as %s', figname)
-            self.image_drawer.draw_and_save(self.fake_data, self.real_data, figname, self.update_n)
+        if self.process_idx == 0 and self.save_obs and self.update_n % self.save_final_obs_update_interval == 0:
+            self.observation_saver.save(self.fake_data, self.real_data, self.update_n)
 
         self.__reset_buffers()
         self.__reset_flags()
@@ -623,12 +519,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             else:
                 pout, _ = self.generator.pi_and_v(state)
 
-            p1, p2, a1, a2 = pout
+            prob, act = pout
 
             if self.act_deterministically:
-                a1, a2 = [ np.argmax(p.log_p.data, axis=1)[0] for p in (p1, p2) ]
+                act = [ np.argmax(p.log_p.data, axis=1)[0] for p in prob ]
 
-            return self.pack_action(int(a1.data), int(a2.data))
+            return self.pack_action(act)
 
 
     def load(self, dirname):
