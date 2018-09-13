@@ -282,7 +282,8 @@ def demo_many(env, agent, args, savename, suptitle, dataset, n_row=10, n_col=5):
                 ax = plt.subplot(gs[i, j])
                 ax.imshow(obs[n][args.max_episode_steps]['image'], origin='lower')
                 set_axis_prop(ax)
-    
+                n += 1
+
     # save figure
     fig.suptitle(suptitle)
     plt.savefig(savename)
