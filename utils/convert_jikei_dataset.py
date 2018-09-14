@@ -18,7 +18,7 @@ def fill(fg, imsize, factor=0.8):
     bg[c-int(h/2):c-int(h/2)+h, c-int(w/2):c-int(w/2)+w] = fg
     return bg
 
-def convert_jikei_img(img, imsize, thres=190):
+def convert_jikei_img(img, imsize, thres=128):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # (H, W)
     _, img = cv2.threshold(img, thres, 1.0, cv2.THRESH_BINARY)
 
@@ -92,7 +92,7 @@ if __name__ == '__main__':
         all_img.append(img)
         all_tag = all_tag + tag
 
-    all_img = np.stack(all_img)
+    all_img = np.concatenate(all_img, axis=0)
     print(all_img.shape)
     np.savez_compressed(args.savename, img=all_img, tag=all_tag)
 

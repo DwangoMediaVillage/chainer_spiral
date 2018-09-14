@@ -32,6 +32,8 @@ from utils.arg_utils import load_args, print_args
 from utils.stat_utils import get_model_param_sum
 from dataset.mnist_dataset import MnistDataset
 from dataset.toy_dataset import ToyDataset
+from dataset.emnist_dataset import EmnistDataset
+from dataset.jikei_dataset import JikeiDataset
 from models.spiral import SpiralMnistModel, SpiralToyModel, SpiralMnistDiscriminator, SpiralToyDiscriminator
 
 def main():
@@ -71,6 +73,8 @@ def main():
     parser.add_argument('--demo_savename')
     parser.add_argument('--staying_penalty', type=float, default=0.0)
     parser.add_argument('--conditional', action='store_true')
+    parser.add_argument('--jikei_npz')
+    parser.add_argument('--emnist_gz')
     args = parser.parse_args()
     print_args(args)
 
@@ -199,6 +203,99 @@ def main():
             
             # return state as a tuple
             return c, x, q
+    
+    elif args.problem == 'jikei':
+        imsize = 64
+        in_channel = 1
+        pos_resolution = 32
+        obs_pos_dim = imsize * imsize
+
+        def make_env(process_idx, test):
+            env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
+                            imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
+            return env
+
+        assert not args.conditional, "conditional generation for jikei is not implemented!"
+
+        dataset = JikeiDataset(args.jikei_npz)
+
+        gen = SpiralMnistModel(imsize, args.conditional)
+        dis = SpiralMnistDiscriminator(imsize, args.conditional)
+
+        def preprocess_image(x):
+            """ function to preprocess image from observation """
+            x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
+            x = x.astype(np.float32) / 255.0
+            x = np.reshape(x, [1, 1] + list(x.shape))
+            return x
+
+        def preprocess_obs(obs):
+            """ function to preprocess observation from MyPaintEnv with MNIST (black and white images) """
+            c = obs['image']
+            x = obs['position']
+            q = obs['prob']
+
+            # image
+            c = preprocess_image(c)
+
+            # position
+            x /= float(obs_pos_dim)
+            x = np.asarray(x, dtype=np.float32) 
+            x = np.reshape(x, (1, 1))
+
+            # prob
+            q = np.asarray(q, dtype=np.float32)
+            q = np.reshape(q, (1, 1))
+            
+            # return state as a tuple
+            return c, x, q
+
+    elif args.problem == 'emnist':
+        imsize = 64
+        in_channel = 1
+        pos_resolution = 32
+        obs_pos_dim = imsize * imsize
+
+        def make_env(process_idx, test):
+            env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
+                            imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
+            return env
+
+        assert not args.conditional, "conditional generation for emnist is not implemented!"
+
+        dataset = Emnist(args.emnist_gz)
+
+        gen = SpiralMnistModel(imsize, args.conditional)
+        dis = SpiralMnistDiscriminator(imsize, args.conditional)
+
+        def preprocess_image(x):
+            """ function to preprocess image from observation """
+            x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
+            x = x.astype(np.float32) / 255.0
+            x = np.reshape(x, [1, 1] + list(x.shape))
+            return x
+
+        def preprocess_obs(obs):
+            """ function to preprocess observation from MyPaintEnv with MNIST (black and white images) """
+            c = obs['image']
+            x = obs['position']
+            q = obs['prob']
+
+            # image
+            c = preprocess_image(c)
+
+            # position
+            x /= float(obs_pos_dim)
+            x = np.asarray(x, dtype=np.float32) 
+            x = np.reshape(x, (1, 1))
+
+            # prob
+            q = np.asarray(q, dtype=np.float32)
+            q = np.reshape(q, (1, 1))
+            
+            # return state as a tuple
+            return c, x, q
+
 
     else:
         raise NotImplementedError()
