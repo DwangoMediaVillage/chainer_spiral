@@ -263,7 +263,7 @@ def main():
 
         assert not args.conditional, "conditional generation for emnist is not implemented!"
 
-        dataset = Emnist(args.emnist_gz)
+        dataset = EmnistDataset(args.emnist_gz)
 
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)
