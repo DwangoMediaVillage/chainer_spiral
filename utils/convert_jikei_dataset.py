@@ -3,6 +3,7 @@ import cv2
 import glob
 import os
 import pandas
+import argparse
 
 def fill(fg, imsize, factor=0.8):
     bg = np.ones((imsize, imsize), dtype=np.uint8)
@@ -54,16 +55,44 @@ def load_jikei(target_dir, tags, imsize, lower=0.05, higher=0.05):
                 # for each jpg file
                 img = cv2.imread(jpg_file)  # (H, W, K), K = 3
                 img = convert_jikei_img(img, imsize)
-
                 r_tag.append(tag)
-                r_img.append(img.astype(np.float32))
+                r_img.append(img)
         else:
-            print(f"tag {tag} does not exist in target_dir")
+            print(f"tag {tag} does not exist in {target_dir}")
     
     r_img, r_tag = cut_by_density(r_tag, r_img, lower, higher)
-
+    
+    r_img = np.stack(r_img)
+    
     return r_img, r_tag
 
 def load_tags(filename):
     tags = pandas.read_csv(filename, delimiter='\n', header=None)
     return list(tags[0])
+
+ID = ['200003076', '200003967', '200014740', '200021660', '200021712', '200021763',
+                 '200021851', '200021853', '200021869', '200021925', '200022050', 'brsk00000', 'hnsd00000']
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('target_dir')
+    parser.add_argument('tags_txt')
+    parser.add_argument('savename')
+    parser.add_argument('--imsize', type=int, default=64)
+    args = parser.parse_args()
+
+    tag_list = load_tags(args.tags_txt)
+
+    all_img, all_tag = [], []
+
+    for i in ID:
+        target_dir = os.path.join(args.target_dir, i)
+        img, tag = load_jikei(target_dir, tag_list, args.imsize)
+        print(f"loading {target_dir}, img = {img.shape}")
+        all_img.append(img)
+        all_tag = all_tag + tag
+
+    all_img = np.stack(all_img)
+    print(all_img.shape)
+    np.savez_compressed(args.savename, img=all_img, tag=all_tag)
+
