@@ -24,7 +24,7 @@ class EmnistDataset(chainer.dataset.DatasetMixin):
         return data.reshape(-1, 28 * 28)
 
     def __len__(self):
-        return len(self.train)
+        return self.N
 
     def get_example(self, train=True):
         """ return a batch """

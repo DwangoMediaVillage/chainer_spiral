@@ -11,7 +11,7 @@ class JikeiDataset(chainer.dataset.DatasetMixin):
         self.N = self.train.shape[0]
 
     def __len__(self):
-        return len(self.train)
+        return self.N
 
     def get_example(self, train=True):
         """ return a batch """

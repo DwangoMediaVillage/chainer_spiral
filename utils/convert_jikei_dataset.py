@@ -15,7 +15,7 @@ def fill(fg, imsize, factor=0.8):
 
     c = int(imsize / 2)
 
-    bg[c-int(h/2):c-int(h/2)+h, c-int(w/2):c-int(w/2)+w] = fg
+    bg[c-h//2:c-h//2+h, c-w//2:c-w//2+w] = fg
     return bg
 
 def convert_jikei_img(img, imsize, thres=128):
@@ -70,7 +70,7 @@ def load_tags(filename):
     tags = pandas.read_csv(filename, delimiter='\n', header=None)
     return list(tags[0])
 
-ID = ['200003076', '200003967', '200014740', '200021660', '200021712', '200021763',
+CODES = ['200003076', '200003967', '200014740', '200021660', '200021712', '200021763',
                  '200021851', '200021853', '200021869', '200021925', '200022050', 'brsk00000', 'hnsd00000']
 
 if __name__ == '__main__':
@@ -85,8 +85,8 @@ if __name__ == '__main__':
 
     all_img, all_tag = [], []
 
-    for i in ID:
-        target_dir = os.path.join(args.target_dir, i)
+    for code in CODES:
+        target_dir = os.path.join(args.target_dir, code)
         img, tag = load_jikei(target_dir, tag_list, args.imsize)
         print(f"loading {target_dir}, img = {img.shape}")
         all_img.append(img)
