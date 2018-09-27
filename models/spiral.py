@@ -72,7 +72,10 @@ class AutoregressiveDecoder(chainer.Chain):
         p2 = SoftmaxDistribution(h_a2)
         a2 = p2.sample()
 
-        return p1, p2, a1, a2
+        probs = [p1, p2]
+        acts = [a1, a2]
+
+        return probs, acts
 
 
 class SpiralMnistDiscriminator(chainer.Chain):
@@ -308,7 +311,10 @@ class ToyPolicyNet(chainer.Chain):
         z2 = self.d_a2_l2(z2)
         p2 = SoftmaxDistribution(z2)
 
-        return p1, p2, p1.sample(), p2.sample()
+        probs = [p1, p2]
+        acts = [p1.sample(), p2.sample()]
+
+        return probs, acts
 
     
 class ToyValueNet(chainer.Chain):
