@@ -71,12 +71,11 @@ def main():
     parser.add_argument('--save_final_obs_update_interval', type=int, default=100)
     parser.add_argument('--mnist_target_label', type=int)
     parser.add_argument('--mnist_binarization', action='store_true')
-    parser.add_argument('--staying_penalty', type=float, default=0.0)
-    parser.add_argument('--conditional', action='store_true')
     parser.add_argument('--jikei_npz')
     parser.add_argument('--emnist_gz')
     parser.add_argument('--continuous_drawing_penalty', type=float, default=0.0)
     parser.add_argument('--empty_drawing_penalty', type=float, default=10.0)
+    parser.add_argument('--staying_penalty', type=float, default=0.0)
     parser.add_argument('--load', type=str, default='')
     parser.add_argument('--demo')
     parser.add_argument('--demo_savename')
@@ -111,15 +110,16 @@ def main():
 
     # define func to create env, target data sampler, and models
     # TODO: MyPaintEnv is not wrapped by EnvSpec
+    # TODO: refactoring: simplify train_simple.py
+
     if args.problem == 'toy':
         imsize = 3
         in_channel = 1
         obs_pos_dim = imsize * imsize
-
         def make_env(process_idx, test):
             env = ToyEnv(imsize)
             return env
-
+        
         if args.conditional:
             train_patterns = [
                 (1, 4, 7), (0, 1, 2), (3, 4, 5), (2, 5, 8)
@@ -134,75 +134,7 @@ def main():
         dataset = ToyDataset(imsize, train_patterns, test_patterns)
         gen = SpiralToyModel(imsize, args.conditional)
         dis = SpiralToyDiscriminator(imsize, args.conditional)
-
-        def preprocess_image(x):
-            """ function to preprocess image from observation """
-            x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
-            x = x.astype(np.float32) / 255.0
-            x = np.reshape(x, [1, 1] + list(x.shape))
-            return x
-
-        def preprocess_obs(obs):
-            """ function to preprocess observation from ToyEnv """
-            c = obs['image']
-            x = obs['position']
-            q = obs['prob']
-
-            # image
-            c = preprocess_image(c)
-
-            # position
-            x /= float(obs_pos_dim)
-            x = np.asarray(x, dtype=np.float32) 
-            x = np.reshape(x, (1, 1))
-
-            # prob
-            q = np.asarray(q, dtype=np.float32)
-            q = np.reshape(q, (1, 1))
-            
-            # return state as a tuple
-            return c, x, q
-
-        def pack_action(act):
-            a1, a2 = act  # sampled actions by policy net
-            return {'position': int(a1.data),
-                    'pressure': 1.0,
-                    'color': (0, 0, 0),
-                    'prob': int(a2.data)}
-
-        def compute_auxiliary_reward(past_reward, past_act, n_episode):
-
-            empty = True
-            drawing_steps = 0
-
-            tmp_a1, tmp_a2 = None, None
-
-            for t in range(args.max_episode_steps):
-                a1 = past_act[n_episode, t]['position']
-                a2 = past_act[n_episode, t]['prob']
-                
-                if empty and a2: 
-                    empty = False
-
-                if t > 0:
-                    if tmp_a2 and a2:
-                        drawing_steps += 1
-                    if not a2:
-                        drawing_steps = 0
-                    past_reward[n_episode, t] -= drawing_steps * args.continuous_drawing_penalty
-
-                    if tmp_a1 == a1:
-                        past_reward[n_episode, t] -= args.staying_penalty
-
-                tmp_a1 = a1
-                tmp_a2 = a2
-
-            if empty:
-                past_reward[n_episode, args.max_episode_steps - 1] -= args.empty_drawing_penalty
-            
-            return past_reward
-
-
+    
     elif args.problem == 'mnist':
         imsize = 64
         in_channel = 1
@@ -222,34 +154,6 @@ def main():
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)
 
-        def preprocess_image(x):
-            """ function to preprocess image from observation """
-            x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
-            x = x.astype(np.float32) / 255.0
-            x = np.reshape(x, [1, 1] + list(x.shape))
-            return x
-
-        def preprocess_obs(obs):
-            """ function to preprocess observation from MyPaintEnv with MNIST (black and white images) """
-            c = obs['image']
-            x = obs['position']
-            q = obs['prob']
-
-            # image
-            c = preprocess_image(c)
-
-            # position
-            x /= float(obs_pos_dim)
-            x = np.asarray(x, dtype=np.float32) 
-            x = np.reshape(x, (1, 1))
-
-            # prob
-            q = np.asarray(q, dtype=np.float32)
-            q = np.reshape(q, (1, 1))
-            
-            # return state as a tuple
-            return c, x, q
-    
     elif args.problem == 'jikei':
         imsize = 64
         in_channel = 1
@@ -267,34 +171,6 @@ def main():
 
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)
-
-        def preprocess_image(x):
-            """ function to preprocess image from observation """
-            x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
-            x = x.astype(np.float32) / 255.0
-            x = np.reshape(x, [1, 1] + list(x.shape))
-            return x
-
-        def preprocess_obs(obs):
-            """ function to preprocess observation from MyPaintEnv with MNIST (black and white images) """
-            c = obs['image']
-            x = obs['position']
-            q = obs['prob']
-
-            # image
-            c = preprocess_image(c)
-
-            # position
-            x /= float(obs_pos_dim)
-            x = np.asarray(x, dtype=np.float32) 
-            x = np.reshape(x, (1, 1))
-
-            # prob
-            q = np.asarray(q, dtype=np.float32)
-            q = np.reshape(q, (1, 1))
-            
-            # return state as a tuple
-            return c, x, q
 
     elif args.problem == 'emnist':
         imsize = 64
@@ -314,77 +190,75 @@ def main():
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)
 
-        def preprocess_image(x):
-            """ function to preprocess image from observation """
-            x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
-            x = x.astype(np.float32) / 255.0
-            x = np.reshape(x, [1, 1] + list(x.shape))
-            return x
-
-        def preprocess_obs(obs):
-            """ function to preprocess observation from MyPaintEnv with MNIST (black and white images) """
-            c = obs['image']
-            x = obs['position']
-            q = obs['prob']
-
-            # image
-            c = preprocess_image(c)
-
-            # position
-            x /= float(obs_pos_dim)
-            x = np.asarray(x, dtype=np.float32) 
-            x = np.reshape(x, (1, 1))
-
-            # prob
-            q = np.asarray(q, dtype=np.float32)
-            q = np.reshape(q, (1, 1))
-            
-            # return state as a tuple
-            return c, x, q
-
-
-        def pack_action(act):
-            a1, a2 = act  # sampled actions by policy net
-            return {'position': int(a1.data),
-                    'pressure': 1.0,
-                    'color': (0, 0, 0),
-                    'prob': int(a2.data)}
-
-        def compute_auxiliary_reward(past_reward, past_act, n_episode):
-
-            empty = True
-            drawing_steps = 0
-
-            tmp_a1, tmp_a2 = None, None
-
-            for t in range(args.max_episode_steps):
-                a1 = past_act[n_episode, t]['position']
-                a2 = past_act[n_episode, t]['prob']
-                
-                if empty and a2: 
-                    empty = False
-
-                if t > 0:
-                    if tmp_a2 and a2:
-                        drawing_steps += 1
-                    if not a2:
-                        drawing_steps = 0
-                    past_reward[n_episode, t] -= drawing_steps * args.continuous_drawing_penalty
-
-                    if tmp_a1 == a1:
-                        past_reward[n_episode, t] -= args.staying_penalty
-
-                tmp_a1 = a1
-                tmp_a2 = a2
-
-            if empty:
-                past_reward[n_episode, args.max_episode_steps - 1] -= args.empty_drawing_penalty
-            
-            return past_reward
-
-
     else:
         raise NotImplementedError()
+    
+
+    def preprocess_image(x):
+        """ function to preprocess image from observation """
+        x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)  # unit8, 2d matrix
+        x = x.astype(np.float32) / 255.0
+        x = np.reshape(x, [1, 1] + list(x.shape))
+        return x
+
+    def preprocess_obs(obs):
+        """ function to preprocess observation from env """
+        c = obs['image']
+        x = obs['position']
+        q = obs['prob']
+
+        # image
+        c = preprocess_image(c)
+
+        # position
+        x /= float(obs_pos_dim)
+        x = np.asarray(x, dtype=np.float32) 
+        x = np.reshape(x, (1, 1))
+
+        # prob
+        q = np.asarray(q, dtype=np.float32)
+        q = np.reshape(q, (1, 1))
+        
+        # return state as a tuple
+        return c, x, q
+
+    def pack_action(act):
+        a1, a2 = act  # sampled actions by policy net
+        return {'position': int(a1.data),
+                'pressure': 1.0,
+                'color': (0, 0, 0),
+                'prob': int(a2.data)}
+
+    def compute_auxiliary_reward(past_reward, past_act, n_episode):
+        empty = True
+        drawing_steps = 0
+
+        tmp_a1, tmp_a2 = None, None
+
+        for t in range(args.max_episode_steps):
+            a1 = past_act[n_episode, t]['position']
+            a2 = past_act[n_episode, t]['prob']
+            
+            if empty and a2: 
+                empty = False
+
+            if t > 0:
+                if tmp_a2 and a2:
+                    drawing_steps += 1
+                if not a2:
+                    drawing_steps = 0
+                past_reward[n_episode, t] -= drawing_steps * args.continuous_drawing_penalty
+
+                if tmp_a1 == a1:
+                    past_reward[n_episode, t] -= args.staying_penalty
+
+            tmp_a1 = a1
+            tmp_a2 = a2
+
+        if empty:
+            past_reward[n_episode, args.max_episode_steps - 1] -= args.empty_drawing_penalty
+        
+        return past_reward
 
     # initialize optimizers
     gen_opt = chainer.optimizers.Adam(alpha=args.lr, beta1=0.5)
