@@ -380,7 +380,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             self.real_data[n] = self.past_conditional_input[n]
         else:
             self.real_data[n] = self.dataset.get_example()
-            
+
         # compute L2 loss between target data and drawn picture by the agent
         l2_loss = F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
         if n == 0:
