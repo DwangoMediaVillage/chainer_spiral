@@ -165,8 +165,6 @@ def main():
                             imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
             return env
 
-        assert not args.conditional, "conditional generation for jikei is not implemented!"
-
         dataset = JikeiDataset(args.jikei_npz)
 
         gen = SpiralMnistModel(imsize, args.conditional)
@@ -182,8 +180,6 @@ def main():
             env = MyPaintEnv(max_episode_steps=args.max_episode_steps,
                             imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
             return env
-
-        assert not args.conditional, "conditional generation for emnist is not implemented!"
 
         dataset = EmnistDataset(args.emnist_gz)
 
