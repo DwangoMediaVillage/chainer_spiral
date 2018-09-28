@@ -343,7 +343,7 @@ def main():
 
     if args.demo:
         # demo mode
-        from spiral_evaluator import demo_static, demo_movie, demo_many
+        from spiral_evaluator import demo_static, demo_movie, demo_many, demo_output_json
         env = make_env(0, True)
 
         if args.demo_savename:
@@ -356,6 +356,8 @@ def main():
                 savename = os.path.join(savedir, 'movie_result.mp4')
             elif args.demo == 'many':
                 savename = os.path.join(savedir, 'many_result.png')
+            elif args.demo == 'json':
+                savename = os.path.join(savedir, 'actions.json')
             else:
                 raise NotImplementedError('Invalid demo mode')
 
@@ -368,6 +370,8 @@ def main():
             demo_movie(env, agent, args, savename, suptitle, dataset, plot_act=args.problem != 'toy')
         elif args.demo == 'many':
             demo_many(env, agent, args, savename, suptitle, dataset)
+        elif args.demo == 'json':
+            demo_output_json(env, agent, args, savename, dataset)
         else:
             raise NotImplementedError('Invalid demo mode')
     
