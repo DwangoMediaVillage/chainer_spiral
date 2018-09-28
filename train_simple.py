@@ -36,7 +36,7 @@ from utils.arg_utils import load_args, print_args
 from utils.stat_utils import get_model_param_sum
 from dataset.mnist_dataset import MnistDataset
 from dataset.toy_dataset import ToyDataset
-from dataset.emnist_dataset import EmnistDataset
+from dataset.emnist_dataset import EMnistDataset
 from dataset.jikei_dataset import JikeiDataset
 from models.spiral import SpiralMnistModel, SpiralToyModel, SpiralMnistDiscriminator, SpiralToyDiscriminator
 
@@ -181,7 +181,7 @@ def main():
                             imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
             return env
 
-        dataset = EmnistDataset(args.emnist_gz)
+        dataset = EMnistDataset(args.emnist_gz)
 
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)

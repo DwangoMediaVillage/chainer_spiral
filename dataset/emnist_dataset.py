@@ -3,8 +3,8 @@ import numpy as np
 import gzip
 import cv2
 
-class EmnistDataset(chainer.dataset.DatasetMixin):
-    """ Koten Jikei dataset. get_exmaple() returns a batch which has a converted mnist image 
+class EMnistDataset(chainer.dataset.DatasetMixin):
+    """ EMNIST dataset. get_exmaple() returns a batch which has a converted emnist image 
         as chainer.Variable whose value range is [0, 1]
 
     Args:
