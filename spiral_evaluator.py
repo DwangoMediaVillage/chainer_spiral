@@ -7,7 +7,6 @@ from future import standard_library
 standard_library.install_aliases()  # NOQA
 
 import numpy as np
-import json
 
 # TODO (enhancement): Support Windows
 import matplotlib
@@ -290,38 +289,3 @@ def demo_many(env, agent, args, savename, suptitle, dataset, n_row=10, n_col=5):
     # save figure
     fig.suptitle(suptitle)
     plt.savefig(savename)
-
-
-def demo_output_json(env, agent, args, savename, dataset, N=100):
-    """ run N generations and serializes actions as a json file """
-
-    def convert_action_to_serialize(action):
-        x, y = env.convert_x(action['position'])
-        x = (x - env.tile_offset) / env.imsize  # -> [0, 1]
-        y = (y - env.tile_offset) / env.imsize  # -> [0, 1]
-        p = action['pressure']
-        r, g, b = action['color']
-        q = action['prob']
-        return [x, y, p, r, g, b, q]
-
-    if args.conditional:
-        _, actions, _ = run_episode(env, agent, N, args.max_episode_steps, conditional=True, dataset=dataset)
-    else:
-        _, actions = run_episode(env, agent, N, args.max_episode_steps)
-
-    alldata = []
-    for action in actions:
-        data = []
-        for t in range(args.max_episode_steps):
-            data.append(convert_action_to_serialize(action[t]))
-        alldata.append(data)
-    
-    alldata_json = {
-        'canvas_size': [env.pos_resolution, env.pos_resolution],
-        'version': '0.1',
-        'actions': alldata
-    }
-
-    with open(savename, 'w') as f:
-        logger.info('Saving actions as : %s', savename)
-        json.dump(alldata_json, f)
