@@ -19,8 +19,8 @@ def load_args(args, arg_log, exceptions=None):
 def print_args(args, logger=None):
     """ print argument list by using logger """
     logger = logger or logging.getLogger(__name__)
-    logger.warn('================================')
+    logger.warning('================================')
     for key, value in vars(args).items():
-        logger.warn('%s : %s', key, value)
-    logger.warn('================================')
+        logger.warning('%s : %s', key, value)
+    logger.warning('================================')
     

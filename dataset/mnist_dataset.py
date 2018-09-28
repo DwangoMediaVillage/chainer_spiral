@@ -40,7 +40,7 @@ class MnistDataset(chainer.dataset.DatasetMixin):
     def __filter_single_class(self, xs, label):
         assert label >= 0 and label <= 9
         indices = [ i for i, x in enumerate(xs) if x[1] == label ]
-        return [ xs[i][0] for i in indices ]
+        return [ xs[i] for i in indices ]
 
     def __get_mnist(self):
         train, test = chainer.datasets.get_mnist(withlabel=True, ndim=2)
@@ -57,7 +57,7 @@ class MnistDataset(chainer.dataset.DatasetMixin):
 
     def __preprocess_image(self, x):
         """ convert a mnist image to a batch """
-        x = x[0][0] * 255.0
+        x = x[0][0] * 255.0  # (28, 28), [0, 255.0]
         x = x.astype(np.uint8)
         x = cv2.resize(x, (self.imsize, self.imsize))
         if self.binarization:
