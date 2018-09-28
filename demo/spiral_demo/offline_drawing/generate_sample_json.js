@@ -21,7 +21,7 @@ function sampleActions(length) {
 var data = {
     'canvas_size': [100, 100],
     'version': '0.1',
-    'actions': sampleActions(100)
+    'actions': [sampleActions(100), sampleActions(80), sampleActions(45)]
 }
 
 let stringdata = JSON.stringify(data)
