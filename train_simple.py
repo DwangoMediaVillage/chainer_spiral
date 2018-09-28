@@ -229,7 +229,7 @@ def main():
         empty = True
         drawing_steps = 0
 
-        tmp_a1, tmp_a2 = None, None
+        last_a1, last_a2 = None, None
 
         for t in range(args.max_episode_steps):
             a1 = past_act[n_episode, t]['position']
@@ -239,17 +239,17 @@ def main():
                 empty = False
 
             if t > 0:
-                if tmp_a2 and a2:
+                if last_a2 and a2:
                     drawing_steps += 1
                 if not a2:
                     drawing_steps = 0
                 past_reward[n_episode, t] -= drawing_steps * args.continuous_drawing_penalty
 
-                if tmp_a1 == a1:
+                if last_a1 == a1:
                     past_reward[n_episode, t] -= args.staying_penalty
 
-            tmp_a1 = a1
-            tmp_a2 = a2
+            last_a1 = a1
+            last_a2 = a2
 
         if empty:
             past_reward[n_episode, args.max_episode_steps - 1] -= args.empty_drawing_penalty
