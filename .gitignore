@@ -1,5 +1,6 @@
 .env
 results/
+matplotlibrc
 
 # ignore results direcotrey created by chainerRL
 results/
