@@ -1,5 +1,6 @@
 var jsonfile = 'actions.json'
 var bg_color = 245
+var border_color = 255
 var cursor_size = 4
 var stroke_weight_ratio = 5.0
 var border_weight = 3
@@ -26,14 +27,12 @@ function randint(n) {
 }
 
 function setup() {
-
 	graphics_size = graphics_size + border_weight * 2
-
 	canvas = createCanvas(graphics_size * n_rows, graphics_size * n_cols)
 	canvas.parent('sketch-holder')
 	frameRate(frame_rate)
 
-	// set graphics
+	// set and init graphics
 	for (var i=0; i<n_rows; i++) {
 		for (var j=0; j<n_cols; j++){
 			var g = createGraphics(graphics_size, graphics_size)
@@ -46,7 +45,7 @@ function setup() {
 
 
 function draw() {
-	background(255);
+	background(border_color);
 	var n = 0
 	var stopped = 0
 	for (var i=0; i<n_rows; i++) {
@@ -57,7 +56,6 @@ function draw() {
 			if (played) {
 				// draw background and border
 				init_graphic(g)
-
 				// update graphic
 				stopped += update_graphic(g, actions[n], steps[n], t)
 			}
@@ -105,7 +103,7 @@ function init_graphic(graphic) {
 	graphic.background(bg_color)
 
 	// draw border of the canvas
-	graphic.stroke(255)
+	graphic.stroke(border_color)
 	graphic.strokeWeight(border_weight)
 	graphic.noFill()
 	graphic.rect(0, 0, graphics_size-border_weight, graphics_size-border_weight)
