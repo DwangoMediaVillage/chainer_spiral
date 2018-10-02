@@ -135,7 +135,8 @@ function update_graphic(graphic, action, steps, t) {
 
 
 function drawCursor(graphic, action, alpha) {
-	var [x, y, p, r, g, b, q] = action
+	var x = action[0],
+		y = action[1]
 	x = scale_point(x)
 	y = scale_point(y)
 	graphic.stroke(255, 105, 180, alpha)
