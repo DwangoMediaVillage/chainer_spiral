@@ -1,77 +1,171 @@
-var canvasWidth = 400
-var canvasHeight = 400
-var canvas
+const jsonfile = 'actions.json'
+const bgColor = 245
+const borderColor = 255
+const cursorSize = 4
+const strokeWeightRatio = 5.0
+const borderWeight = 3
+var graphicsSize = 100
+const frameRateVal = 10
+const nRows = 3
+const nCols = 5
+const buttonOffset = 30
 
-var frame_rate = 10
-var played = false
-var actions = []
-var prev_x = 0
-var prev_y = 0
-var stroke_weight_ratio = 10
+var canvas
 var data
-var jsonfile = 'foo.json'
+var graphics = []
+var t = 0
+var actions = []
+var steps = []
+var played = false
+var button
 
 function preload() {
 	console.log('Loading ' + jsonfile)
 	data = loadJSON(jsonfile)
 }
 
+function randint(n) {
+	return Math.floor(Math.random() * Math.floor(n))
+}
+
 function setup() {
-	canvas = createCanvas(canvasWidth, canvasHeight);
+	graphicsSize += borderWeight * 2
+	canvas = createCanvas(graphicsSize * nCols, graphicsSize * nRows + buttonOffset)
 	canvas.parent('sketch-holder')
-	frameRate(frame_rate)
+	frameRate(frameRateVal)
 
-	actions = data['actions'].slice()
-}
+	// put button to start playing
+	button = createButton('Play')
+	button.parent('sketch-holder')
+	button.position(0, 0)
+	button.mousePressed(play)
 
-function start() {
-	played = true
-}
-
-function stop() {
-	played = false
-}
-
-function reset() {
-	// clear canvas and reset status
-	clear()
-	played = false
-	actions = data['actions'].slice()
-}
-
-function draw() {
-	// draw border of the canvas
-	stroke(0)
-	strokeWeight(1)
-	noFill()
-	rect(0, 0, canvasWidth-1, canvasHeight-1)
-
-	// draw contents
-	if (played) {
-		var action = actions.shift()
-		if (action) {
-			drawLine(action)
-		} else {
-			played = false
+	// set and init graphics
+	for (let i=0; i<nRows; i++) {
+		for (let j=0; j<nCols; j++){
+			let g = createGraphics(graphicsSize, graphicsSize)
+			initGraphic(g)
+			image(g, j * graphicsSize, i * graphicsSize + buttonOffset)
+			graphics.push(g)
 		}
 	}
 }
 
-function drawLine(action) {
-	var [x, y, p, r, g, b, q] = action
 
-	// scale x and y
-	x = x * canvasWidth
-	y = y * canvasHeight
+function draw() {
+	background(borderColor);
+	let n = 0
+	let stopped = 0
+	for (let i=0; i<nRows; i++) {
+		for (let j=0; j<nCols; j++){
+			let g = graphics[nCols * i + j]
 
-	if (q) {
-		// draw
-		strokeWeight(p * stroke_weight_ratio)
-		stroke(r * 255, g * 255, b * 255)
-		line(prev_x, prev_y, x, y)
+			// update graphic
+			if (played) {
+				// draw background and border
+				initGraphic(g)
+				// update graphic
+				stopped += updateGraphic(g, actions[n], steps[n], t)
+			}
+			
+			// render graphics to the canvas
+			image(g, j * graphicsSize, i * graphicsSize + buttonOffset)
+			n += 1
+		}
 	}
+
+	// update time counter
+	t += 1
+
+	// if all the graphics finish to draw, stop playing
+	if (stopped == n) {
+		console.log('playing stopped')
+		played = false
+	}
+}
+
+function play() {
+	// sample action sequences from json buffer, and starts playing
+	clear()
+	actions = []
+	steps = []
+
+	t = 0
+	for (let i=0; i < nRows * nCols; i++) {
+		let action = sampleAction()
+		actions.push(action)
+		steps.push(action.length)
+	}
+
+	played = true
+}
+
+function sampleAction() {
+	let i = randint(data['actions'].length)
+	return data['actions'][i].slice()
+}
+
+function initGraphic(graphic) {
+	// draw background and border of a grahics
+	graphic.background(bgColor)
+
+	// draw border of the canvas
+	graphic.stroke(borderColor)
+	graphic.strokeWeight(borderWeight)
+	graphic.noFill()
+	graphic.rect(0, 0, graphicsSize-borderWeight, graphicsSize-borderWeight)
+}
+
+function updateGraphic(graphic, action, steps, t) {
+	// may be update a graphic, and returns 1 if step t reaches the terminal state
 	
-	// update the previous point
-	prev_x = x
-	prev_y = y
+	// draw cursor
+	if (t > 0) {
+		drawCursor(graphic, action[t-1], 128)
+	}
+	drawCursor(graphic, action[t], 255)
+
+	let tTerminate = 0
+	if (t >= steps - 1) {
+		tTerminate = steps - 1
+	} else {
+		tTerminate = t
+	}
+
+	// draw lines
+	drawLines(graphic, action, tTerminate)
+
+	return t >= steps - 1
+}
+
+
+function drawCursor(graphic, action, alpha) {
+	let x = action[0],
+		y = action[1]
+	x = scalePoint(x)
+	y = scalePoint(y)
+	graphic.stroke(255, 105, 180, alpha)
+	graphic.strokeWeight(4)
+	graphic.ellipse(x, y, cursorSize, cursorSize)
+}
+
+function drawLines(graphic, action, tTerminate) {
+	let prevX = 0
+	let prevY = 0
+	for (let t = 0; t < tTerminate; t++) {
+		let [x, y, p, r, g, b, q] = action[t]
+		x = scalePoint(x)
+		y = scalePoint(y)
+		if (q) {
+			graphic.strokeWeight(p * strokeWeightRatio)
+			graphic.stroke(r * 255, g * 255, b * 255)
+			graphic.line(prevX, prevY, x, y)
+		}
+		prevX = x
+		prevY = y
+	}
+}
+
+function scalePoint(x) {
+	return x * (graphicsSize - borderWeight * 2) + borderWeight
 }
