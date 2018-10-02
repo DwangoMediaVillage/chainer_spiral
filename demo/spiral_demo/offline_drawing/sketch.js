@@ -1,15 +1,19 @@
 var canvasWidth = 400
 var canvasHeight = 400
-var canvas
+var bg_color = 245
+var cursor_size = 20
+var stroke_weight_ratio = 10
+var frame_rate = 5
+var jsonfile = 'actions.json'
 
-var frame_rate = 10
+var canvas
 var played = false
 var action = []
 var prev_x = 0
 var prev_y = 0
-var stroke_weight_ratio = 10
 var data
-var jsonfile = 'actions.json'
+var step
+var step_length
 
 function preload() {
 	console.log('Loading ' + jsonfile)
@@ -22,24 +26,33 @@ function randint(n) {
 
 function sample_action() {
 	var i = randint(data['actions'].length)
-	return  data['actions'][i].slice()
+	var sampled_data = data['actions'][i].slice()
+
+	// reset the timer
+	step = 0
+
+	return sampled_data
 }
 
 function setup() {
 	canvas = createCanvas(canvasWidth, canvasHeight);
 	canvas.parent('sketch-holder')
 	frameRate(frame_rate)
-	action = sample_action()
 }
 
 function play() {
 	// clear canvas
 	clear()
+	action = sample_action()
+	step_length = action.length
 	played = true
 }
 
 
 function draw() {
+	// draw background
+	background(bg_color)
+
 	// draw border of the canvas
 	stroke(0)
 	strokeWeight(1)
@@ -48,15 +61,39 @@ function draw() {
 
 	// draw contents
 	if (played) {
-		var act = action.shift()
-		if (act) {
-			console.log(act)
-			drawLine(act)
-		} else {
+		drawAction(action, step)
+		step += 1
+		if (step == step_length) {
+			// reaches the terminal state. stop playing
 			played = false
-			action = sample_action()
 		}
 	}
+}
+
+function drawAction(action, step) {
+	// draw a cursor at the latest action
+	if (step > 0) {
+		drawCursor(action[step-1], 128)
+	}
+
+	drawCursor(action[step], 255)
+
+	// draw sequence of lines until the indicated time step
+	for (var t = 0; t < step; t++){
+		drawLine(action[t])
+	}
+}
+
+function drawCursor(action, alpha) {
+	var [x, y, p, r, g, b, q] = action
+
+	x = x * canvasWidth
+	y = y * canvasHeight
+
+	// draw cursor
+	stroke(255,105,180, alpha)  // hot pink
+	strokeWeight(4)
+	ellipse(x, y, cursor_size, cursor_size)
 }
 
 function drawLine(action) {
@@ -66,7 +103,7 @@ function drawLine(action) {
 	y = y * canvasHeight
 
 	if (q) {
-		// draw
+		// draw line
 		strokeWeight(p * stroke_weight_ratio)
 		stroke(r * 255, g * 255, b * 255)
 		line(prev_x, prev_y, x, y)
