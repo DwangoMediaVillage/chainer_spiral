@@ -1,13 +1,13 @@
-var jsonfile = 'actions.json'
-var bgColor = 245
-var borderColor = 255
-var cursorSize = 4
-var strokeWeightRatio = 5.0
-var borderWeight = 3
+const jsonfile = 'actions.json'
+const bgColor = 245
+const borderColor = 255
+const cursorSize = 4
+const strokeWeightRatio = 5.0
+const borderWeight = 3
 var graphicsSize = 100
-var frameRate = 10
-var nRows = 5
-var nCols = 5
+const frameRateVal = 10
+const nRows = 5
+const nCols = 5
 
 var canvas
 var data
@@ -30,12 +30,12 @@ function setup() {
 	graphicsSize += borderWeight * 2
 	canvas = createCanvas(graphicsSize * nRows, graphicsSize * nCols)
 	canvas.parent('sketch-holder')
-	frameRate(frameRate)
+	frameRate(frameRateVal)
 
 	// set and init graphics
-	for (var i=0; i<nRows; i++) {
-		for (var j=0; j<nCols; j++){
-			var g = createGraphics(graphicsSize, graphicsSize)
+	for (let i=0; i<nRows; i++) {
+		for (let j=0; j<nCols; j++){
+			let g = createGraphics(graphicsSize, graphicsSize)
 			initGraphic(g)
 			image(g, i * graphicsSize, j * graphicsSize)
 			graphics.push(g)
@@ -46,11 +46,11 @@ function setup() {
 
 function draw() {
 	background(borderColor);
-	var n = 0
-	var stopped = 0
-	for (var i=0; i<nRows; i++) {
-		for (var j=0; j<nCols; j++){
-			var g = graphics[nCols * i + j]
+	let n = 0
+	let stopped = 0
+	for (let i=0; i<nRows; i++) {
+		for (let j=0; j<nCols; j++){
+			let g = graphics[nCols * i + j]
 
 			// update graphic
 			if (played) {
@@ -84,8 +84,8 @@ function play() {
 	steps = []
 
 	t = 0
-	for (var i=0; i < nRows * nCols; i++) {
-		var action = sampleAction()
+	for (let i=0; i < nRows * nCols; i++) {
+		let action = sampleAction()
 		actions.push(action)
 		steps.push(action.length)
 	}
@@ -94,7 +94,7 @@ function play() {
 }
 
 function sampleAction() {
-	var i = randint(data['actions'].length)
+	let i = randint(data['actions'].length)
 	return data['actions'][i].slice()
 }
 
@@ -118,7 +118,7 @@ function updateGraphic(graphic, action, steps, t) {
 	}
 	drawCursor(graphic, action[t], 255)
 
-	var tTerminate = 0
+	let tTerminate = 0
 	if (t >= steps - 1) {
 		tTerminate = steps - 1
 	} else {
@@ -133,7 +133,7 @@ function updateGraphic(graphic, action, steps, t) {
 
 
 function drawCursor(graphic, action, alpha) {
-	var x = action[0],
+	let x = action[0],
 		y = action[1]
 	x = scalePoint(x)
 	y = scalePoint(y)
@@ -143,10 +143,10 @@ function drawCursor(graphic, action, alpha) {
 }
 
 function drawLines(graphic, action, tTerminate) {
-	var prevX = 0
-	var prevY = 0
-	for (var t = 0; t < tTerminate; t++) {
-		var [x, y, p, r, g, b, q] = action[t]
+	let prevX = 0
+	let prevY = 0
+	for (let t = 0; t < tTerminate; t++) {
+		let [x, y, p, r, g, b, q] = action[t]
 		x = scalePoint(x)
 		y = scalePoint(y)
 		if (q) {
