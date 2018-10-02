@@ -1,13 +1,13 @@
 var jsonfile = 'actions.json'
-var bg_color = 245
-var border_color = 255
-var cursor_size = 4
-var stroke_weight_ratio = 5.0
-var border_weight = 3
-var graphics_size = 100
-var frame_rate = 10
-var n_rows = 5
-var n_cols = 5
+var bgColor = 245
+var borderColor = 255
+var cursorSize = 4
+var strokeWeightRatio = 5.0
+var borderWeight = 3
+var graphicsSize = 100
+var frameRate = 10
+var nRows = 5
+var nCols = 5
 
 var canvas
 var data
@@ -27,17 +27,17 @@ function randint(n) {
 }
 
 function setup() {
-	graphics_size = graphics_size + border_weight * 2
-	canvas = createCanvas(graphics_size * n_rows, graphics_size * n_cols)
+	graphicsSize += borderWeight * 2
+	canvas = createCanvas(graphicsSize * nRows, graphicsSize * nCols)
 	canvas.parent('sketch-holder')
-	frameRate(frame_rate)
+	frameRate(frameRate)
 
 	// set and init graphics
-	for (var i=0; i<n_rows; i++) {
-		for (var j=0; j<n_cols; j++){
-			var g = createGraphics(graphics_size, graphics_size)
-			init_graphic(g)
-			image(g, i * graphics_size, j * graphics_size)
+	for (var i=0; i<nRows; i++) {
+		for (var j=0; j<nCols; j++){
+			var g = createGraphics(graphicsSize, graphicsSize)
+			initGraphic(g)
+			image(g, i * graphicsSize, j * graphicsSize)
 			graphics.push(g)
 		}
 	}
@@ -45,23 +45,23 @@ function setup() {
 
 
 function draw() {
-	background(border_color);
+	background(borderColor);
 	var n = 0
 	var stopped = 0
-	for (var i=0; i<n_rows; i++) {
-		for (var j=0; j<n_cols; j++){
-			var g = graphics[n_cols * i + j]
+	for (var i=0; i<nRows; i++) {
+		for (var j=0; j<nCols; j++){
+			var g = graphics[nCols * i + j]
 
 			// update graphic
 			if (played) {
 				// draw background and border
-				init_graphic(g)
+				initGraphic(g)
 				// update graphic
-				stopped += update_graphic(g, actions[n], steps[n], t)
+				stopped += updateGraphic(g, actions[n], steps[n], t)
 			}
 			
 			// render graphics to the canvas
-			image(g, i * graphics_size, j * graphics_size)
+			image(g, i * graphicsSize, j * graphicsSize)
 			n += 1
 		}
 	}
@@ -84,8 +84,8 @@ function play() {
 	steps = []
 
 	t = 0
-	for (var i=0; i < n_rows * n_cols; i++) {
-		var action = sample_action()
+	for (var i=0; i < nRows * nCols; i++) {
+		var action = sampleAction()
 		actions.push(action)
 		steps.push(action.length)
 	}
@@ -93,23 +93,23 @@ function play() {
 	played = true
 }
 
-function sample_action() {
+function sampleAction() {
 	var i = randint(data['actions'].length)
 	return data['actions'][i].slice()
 }
 
-function init_graphic(graphic) {
+function initGraphic(graphic) {
 	// draw background and border of a grahics
-	graphic.background(bg_color)
+	graphic.background(bgColor)
 
 	// draw border of the canvas
-	graphic.stroke(border_color)
-	graphic.strokeWeight(border_weight)
+	graphic.stroke(borderColor)
+	graphic.strokeWeight(borderWeight)
 	graphic.noFill()
-	graphic.rect(0, 0, graphics_size-border_weight, graphics_size-border_weight)
+	graphic.rect(0, 0, graphicsSize-borderWeight, graphicsSize-borderWeight)
 }
 
-function update_graphic(graphic, action, steps, t) {
+function updateGraphic(graphic, action, steps, t) {
 	// may be update a graphic, and returns 1 if step t reaches the terminal state
 	
 	// draw cursor
@@ -118,15 +118,15 @@ function update_graphic(graphic, action, steps, t) {
 	}
 	drawCursor(graphic, action[t], 255)
 
-	var t_terminate = 0
+	var tTerminate = 0
 	if (t >= steps - 1) {
-		t_terminate = steps - 1
+		tTerminate = steps - 1
 	} else {
-		t_terminate = t
+		tTerminate = t
 	}
 
 	// draw lines
-	drawLines(graphic, action, t_terminate)
+	drawLines(graphic, action, tTerminate)
 
 	return t >= steps - 1
 }
@@ -135,30 +135,30 @@ function update_graphic(graphic, action, steps, t) {
 function drawCursor(graphic, action, alpha) {
 	var x = action[0],
 		y = action[1]
-	x = scale_point(x)
-	y = scale_point(y)
+	x = scalePoint(x)
+	y = scalePoint(y)
 	graphic.stroke(255, 105, 180, alpha)
 	graphic.strokeWeight(4)
-	graphic.ellipse(x, y, cursor_size, cursor_size)
+	graphic.ellipse(x, y, cursorSize, cursorSize)
 }
 
-function drawLines(graphic, action, t_terminate) {
-	var prev_x = 0
-	var prev_y = 0
-	for (var t = 0; t < t_terminate; t++) {
+function drawLines(graphic, action, tTerminate) {
+	var prevX = 0
+	var prevY = 0
+	for (var t = 0; t < tTerminate; t++) {
 		var [x, y, p, r, g, b, q] = action[t]
-		x = scale_point(x)
-		y = scale_point(y)
+		x = scalePoint(x)
+		y = scalePoint(y)
 		if (q) {
-			graphic.strokeWeight(p * stroke_weight_ratio)
+			graphic.strokeWeight(p * strokeWeightRatio)
 			graphic.stroke(r * 255, g * 255, b * 255)
-			graphic.line(prev_x, prev_y, x, y)
+			graphic.line(prevX, prevY, x, y)
 		}
-		prev_x = x
-		prev_y = y
+		prevX = x
+		prevY = y
 	}
 }
 
-function scale_point(x) {
-	return x * (graphics_size - border_weight * 2) + border_weight
+function scalePoint(x) {
+	return x * (graphicsSize - borderWeight * 2) + borderWeight
 }
