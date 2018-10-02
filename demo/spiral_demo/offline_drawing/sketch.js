@@ -16,7 +16,6 @@ function preload() {
 	data = loadJSON(jsonfile)
 }
 
-
 function randint(n) {
 	return Math.floor(Math.random() * Math.floor(n))
 }
@@ -33,20 +32,12 @@ function setup() {
 	action = sample_action()
 }
 
-function start() {
+function play() {
+	// clear canvas
+	clear()
 	played = true
 }
 
-function stop() {
-	played = false
-}
-
-function reset() {
-	// clear canvas and reset status
-	clear()
-	played = false
-	action = sample_action()
-}
 
 function draw() {
 	// draw border of the canvas
@@ -63,6 +54,7 @@ function draw() {
 			drawLine(act)
 		} else {
 			played = false
+			action = sample_action()
 		}
 	}
 }
