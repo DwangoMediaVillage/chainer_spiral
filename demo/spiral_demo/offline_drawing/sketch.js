@@ -6,8 +6,9 @@ const strokeWeightRatio = 5.0
 const borderWeight = 3
 var graphicsSize = 100
 const frameRateVal = 10
-const nRows = 5
+const nRows = 3
 const nCols = 5
+const buttonOffset = 30
 
 var canvas
 var data
@@ -16,6 +17,7 @@ var t = 0
 var actions = []
 var steps = []
 var played = false
+var button
 
 function preload() {
 	console.log('Loading ' + jsonfile)
@@ -28,16 +30,22 @@ function randint(n) {
 
 function setup() {
 	graphicsSize += borderWeight * 2
-	canvas = createCanvas(graphicsSize * nRows, graphicsSize * nCols)
+	canvas = createCanvas(graphicsSize * nCols, graphicsSize * nRows + buttonOffset)
 	canvas.parent('sketch-holder')
 	frameRate(frameRateVal)
+
+	// put button to start playing
+	button = createButton('Play')
+	button.parent('sketch-holder')
+	button.position(0, 0)
+	button.mousePressed(play)
 
 	// set and init graphics
 	for (let i=0; i<nRows; i++) {
 		for (let j=0; j<nCols; j++){
 			let g = createGraphics(graphicsSize, graphicsSize)
 			initGraphic(g)
-			image(g, i * graphicsSize, j * graphicsSize)
+			image(g, j * graphicsSize, i * graphicsSize + buttonOffset)
 			graphics.push(g)
 		}
 	}
@@ -61,7 +69,7 @@ function draw() {
 			}
 			
 			// render graphics to the canvas
-			image(g, i * graphicsSize, j * graphicsSize)
+			image(g, j * graphicsSize, i * graphicsSize + buttonOffset)
 			n += 1
 		}
 	}
@@ -74,7 +82,6 @@ function draw() {
 		console.log('playing stopped')
 		played = false
 	}
-
 }
 
 function play() {
