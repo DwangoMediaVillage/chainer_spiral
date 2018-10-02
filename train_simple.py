@@ -72,7 +72,9 @@ def main():
     parser.add_argument('--mnist_target_label', type=int)
     parser.add_argument('--mnist_binarization', action='store_true')
     parser.add_argument('--jikei_npz')
-    parser.add_argument('--emnist_gz')
+    parser.add_argument('--emnist_gz_images')
+    parser.add_argument('--emnist_gz_labels')
+    parser.add_argument('--emnist_limit_labels', action='store_true')
     parser.add_argument('--continuous_drawing_penalty', type=float, default=0.0)
     parser.add_argument('--empty_drawing_penalty', type=float, default=10.0)
     parser.add_argument('--staying_penalty', type=float, default=0.0)
@@ -181,7 +183,7 @@ def main():
                             imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
             return env
 
-        dataset = EMnistDataset(args.emnist_gz)
+        dataset = EMnistDataset(args.emnist_gz_images, args.emnist_gz_labels, args.emnist_limit_labels)
 
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)
@@ -287,7 +289,7 @@ def main():
                 for n in range(args.rollout_n):
                     ax = plt.subplot(gs[n, 0])
                     self.ims_fake.append(
-                        ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray', origin='lower')
+                        ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray')
                     )
                     ax.set_xticks([])
                     ax.set_yticks([])
@@ -296,7 +298,7 @@ def main():
 
                     ax = plt.subplot(gs[n, 1])
                     self.ims_real.append(
-                        ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray', origin='lower')
+                        ax.imshow(np.zeros((imsize, imsize)), vmin=0, vmax=1, cmap='gray')
                     )
                     ax.set_xticks([])
                     ax.set_yticks([])

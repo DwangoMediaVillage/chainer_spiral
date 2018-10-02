@@ -14,14 +14,28 @@ class EMnistDataset(chainer.dataset.DatasetMixin):
         binarization (bool): If True, it gives binarized images
     """
 
-    def __init__(self, gz_filename):
-        self.train = self.__load_emnist(gz_filename)
-        self.N = self.train.shape[0]
+    def __init__(self, gz_images, gz_labels, limit_labels):
+        self.images, self.labels = self.__load_emnist(gz_images, gz_labels)
+        if limit_labels:
+            self.images, self.labels = self.__limit_by_labels(self.images, self.labels)
+        self.N = self.images.shape[0]
 
-    def __load_emnist(self, gz_filename):
-        with gzip.open(gz_filename, 'rb') as f:
-            data = np.frombuffer(f.read(), np.uint8, offset=16)
-        return data.reshape(-1, 28 * 28)
+    def __limit_by_labels(self, images, labels, N=10):
+        res_images, res_labels = [], []
+        for image, label in zip(images, labels):
+            if label <= N:
+                # emnist's labels: [1, 2, ...]
+                res_images.append(image)
+                res_labels.append(label)
+        return np.array(res_images), np.array(res_labels)
+
+    def __load_emnist(self, gz_images, gz_labels):
+        # load image
+        with gzip.open(gz_images, 'rb') as f:
+            images = np.frombuffer(f.read(), np.uint8, offset=16)
+        with gzip.open(gz_labels, 'rb') as f:
+            labels = np.frombuffer(f.read(), np.uint8, offset=8)
+        return images.reshape(-1, 28 * 28), labels
 
     def __len__(self):
         return self.N
@@ -29,7 +43,7 @@ class EMnistDataset(chainer.dataset.DatasetMixin):
     def get_example(self, train=True):
         """ return a batch """
         ind = np.random.randint(self.N)
-        return self.__preprocess_image(self.train[ind])
+        return self.__preprocess_image(self.images[ind])
 
     def __preprocess_image(self, x):
         """ convert an image to a batch """
