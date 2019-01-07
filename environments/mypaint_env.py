@@ -11,6 +11,8 @@ import logging
 import time
 import math
 
+from gym import spaces
+
 class MyPaintEnv(gym.Env):
     action_space = None
     observation_space = None
@@ -40,20 +42,20 @@ class MyPaintEnv(gym.Env):
         self.pos_resolution = pos_resolution
 
         # action space
-        self.action_space = gym.spaces.Dict({
-            'position': gym.spaces.Discrete(self.pos_resolution ** 2),
-            'pressure': gym.spaces.Box(low=0, high=1.0, shape=(), dtype=float),
-            'color': gym.spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
-            'prob': gym.spaces.Discrete(2)
+        self.action_space = spaces.Dict({
+            'position': spaces.Discrete(self.pos_resolution ** 2),
+            'pressure': spaces.Box(low=0, high=1.0, shape=(), dtype=float),
+            'color': spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
+            'prob': spaces.Discrete(2)
         })
 
         # observation space
-        self.observation_space = gym.spaces.Dict({
-            'image': gym.spaces.Box(low=0, high=255, shape=(self.imsize, self.imsize, 3), dtype=np.uint8),
-            'position': gym.spaces.Discrete(self.pos_resolution ** 2),
-            'pressure': gym.spaces.Box(low=0, high=1.0, shape=(), dtype=float),
-            'color': gym.spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
-            'prob': gym.spaces.Discrete(1)
+        self.observation_space = spaces.Dict({
+            'image': spaces.Box(low=0, high=255, shape=(self.imsize, self.imsize, 3), dtype=np.uint8),
+            'position': spaces.Discrete(self.pos_resolution ** 2),
+            'pressure': spaces.Box(low=0, high=1.0, shape=(), dtype=float),
+            'color': spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
+            'prob': spaces.Discrete(1)
         })
 
         # color of the background
