@@ -374,11 +374,11 @@ def main():
     
     else:
         # training mode
-        save_interval = args.n_save_interval * args.max_episode_steps * args.rollout_n
+        save_interval = args.processes * args.n_save_interval * args.max_episode_steps * args.rollout_n
         step_hook = spiral.SpiralStepHook(args.max_episode_steps, save_interval, args.outdir)
         
-        steps = args.n_update * args.max_episode_steps * args.rollout_n
-        eval_interval = args.n_eval_interval * args.max_episode_steps * args.rollout_n
+        steps = args.processes * args.n_update * args.max_episode_steps * args.rollout_n
+        eval_interval = args.processes * args.n_eval_interval * args.max_episode_steps * args.rollout_n
         max_episode_len = args.max_episode_steps * args.rollout_n
 
         if args.processes == 1:
