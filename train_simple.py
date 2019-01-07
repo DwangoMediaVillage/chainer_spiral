@@ -22,7 +22,6 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 import gym
-gym.undo_logger_setup()  # NOQA
 import gym.wrappers
 
 from chainerrl import experiments
@@ -57,8 +56,8 @@ def main():
                         help='Random seed [0, 2 ** 32)')
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--weight_decay', type=float, default=0.0)
-    parser.add_argument('--steps', type=int, default=1000000)
-    parser.add_argument('--eval_interval', type=int, default=100)
+    parser.add_argument('--n_update', type=int, default=10)
+    parser.add_argument('--n_eval_interval', type=int, default=100)
     parser.add_argument('--eval_n_runs', type=int, default=1)
     parser.add_argument('--rollout_n', type=int, default=5)
     parser.add_argument('--profile', action='store_true')
@@ -66,15 +65,15 @@ def main():
     parser.add_argument('--beta', type=float, default=1e-2)
     parser.add_argument('--gp_lambda', type=float, default=10.0)
     parser.add_argument('--max_episode_steps', type=int, default=3)
-    parser.add_argument('--save_global_step_interval', type=int, default=1000)
+    parser.add_argument('--n_save_interval', type=int, default=1000)
     parser.add_argument('--lambda_R', type=float, default=1.0)
-    parser.add_argument('--save_final_obs_update_interval', type=int, default=100)
+    parser.add_argument('--n_save_final_obs_interval', type=int, default=10)
     parser.add_argument('--mnist_target_label', type=int)
     parser.add_argument('--mnist_binarization', action='store_true')
     parser.add_argument('--jikei_npz')
     parser.add_argument('--emnist_gz_images')
     parser.add_argument('--emnist_gz_labels')
-    parser.add_argument('--emnist_limit_labels', action='store_true')
+    parser.add_argument('--emnist_single_label', action='store_true')
     parser.add_argument('--continuous_drawing_penalty', type=float, default=0.0)
     parser.add_argument('--empty_drawing_penalty', type=float, default=10.0)
     parser.add_argument('--staying_penalty', type=float, default=0.0)
@@ -87,10 +86,6 @@ def main():
 
     # init a logger
     logging.basicConfig(level=args.logger_level)
-
-    # check the steps argument is correct
-    if args.steps % (args.rollout_n * args.max_episode_steps) != 0:
-        logging.warn('steps % (rollout_n * max_episode_steps steps) != 0, so that the training will end with error!')
 
     # load arguments from the load directory
     if args.demo and args.load:
@@ -183,7 +178,7 @@ def main():
                             imsize=imsize, pos_resolution=pos_resolution, brush_info_file=args.brush_info_file)
             return env
 
-        dataset = EMnistDataset(args.emnist_gz_images, args.emnist_gz_labels, args.emnist_limit_labels)
+        dataset = EMnistDataset(args.emnist_gz_images, args.emnist_gz_labels, args.emnist_single_label)
 
         gen = SpiralMnistModel(imsize, args.conditional)
         dis = SpiralMnistDiscriminator(imsize, args.conditional)
@@ -275,7 +270,7 @@ def main():
     if not args.demo:
         # class to save snapshot of generated and target images during the training
         class ObservationSaver(object):
-            interval = args.save_final_obs_update_interval
+            interval = args.n_save_final_obs_interval
             def __init__(self):
                 # create directory to save png files
                 self.target_dir = os.path.join(args.outdir, 'final_obs')
@@ -379,7 +374,12 @@ def main():
     
     else:
         # training mode
-        step_hook = spiral.SpiralStepHook(args.max_episode_steps, args.save_global_step_interval, args.outdir)
+        save_interval = args.n_save_interval * args.max_episode_steps * args.rollout_n
+        step_hook = spiral.SpiralStepHook(args.max_episode_steps, save_interval, args.outdir)
+        
+        steps = args.n_update * args.max_episode_steps * args.rollout_n
+        eval_interval = args.n_eval_interval * args.max_episode_steps * args.rollout_n
+        max_episode_len = args.max_episode_steps * args.rollout_n
 
         if args.processes == 1:
             agent.process_idx = 0
@@ -388,10 +388,10 @@ def main():
                 agent=agent,
                 outdir=args.outdir,
                 env=env,
-                steps=args.steps,
+                steps=steps,
                 eval_n_runs=args.eval_n_runs,
-                eval_interval=args.eval_interval,
-                max_episode_len=args.max_episode_steps * args.rollout_n,
+                eval_interval=eval_interval,
+                max_episode_len=max_episode_len,
                 step_hooks=[step_hook],
                 save_best_so_far_agent=False
             )
@@ -402,10 +402,10 @@ def main():
                 processes=args.processes,
                 make_env=make_env,
                 profile=args.profile,
-                steps=args.steps,
+                steps=steps,
                 eval_n_runs=args.eval_n_runs,
-                eval_interval=args.eval_interval,
-                max_episode_len=args.max_episode_steps * args.rollout_n,
+                eval_interval=eval_interval,
+                max_episode_len=max_episode_len,
                 global_step_hooks=[step_hook],
                 save_best_so_far_agent=False
             )
