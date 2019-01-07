@@ -14,16 +14,26 @@ class EMnistDataset(chainer.dataset.DatasetMixin):
         binarization (bool): If True, it gives binarized images
     """
 
-    def __init__(self, gz_images, gz_labels, limit_labels):
+    def __init__(self, gz_images, gz_labels, single_label=False):
         self.images, self.labels = self.__load_emnist(gz_images, gz_labels)
-        if limit_labels:
+        if single_label:
+            self.images, self.labels = self.__limit_by_single_label(self.images, self.labels)
+        else:
             self.images, self.labels = self.__limit_by_labels(self.images, self.labels)
         self.N = self.images.shape[0]
 
-    def __limit_by_labels(self, images, labels, N=10):
+    def __limit_by_single_label(self, images, labels, target_label=11):
         res_images, res_labels = [], []
         for image, label in zip(images, labels):
-            if label <= N:
+            if label == target_label:
+                res_images.append(image)
+                res_labels.append(label)
+        return np.array(res_images), np.array(res_lagels)
+
+    def __limit_by_labels(self, images, labels, target_label=11):
+        res_images, res_labels = [], []
+        for image, label in zip(images, labels):
+            if label < target_label:
                 # emnist's labels: [1, 2, ...]
                 res_images.append(image)
                 res_labels.append(label)
