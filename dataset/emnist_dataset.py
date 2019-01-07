@@ -28,7 +28,7 @@ class EMnistDataset(chainer.dataset.DatasetMixin):
             if label == target_label:
                 res_images.append(image)
                 res_labels.append(label)
-        return np.array(res_images), np.array(res_lagels)
+        return np.array(res_images), np.array(res_labels)
 
     def __limit_by_labels(self, images, labels, target_label=11):
         res_images, res_labels = [], []
