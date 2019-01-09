@@ -63,25 +63,25 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         gen_optimizer (chainer.Optimizer): optimizer to train generator
         dis_optimizer (chainer.Optimizer): optimizer to train discriminator
         dataset (chainer.dataset.DatasetMixin): dataset to feed a batch data to this agent
-        preprocess_image_func (func): function to preprocess image observation from environment
-        preprocess_obs_func (func): function to preprocess whole of observation from environment
-        pack_action_func (func): function to create an input to the environment using inferred actions
+        conditional (bool): IF true, the models are assumed to generate / discriminate images with conditional input
+        reward_mode (string): method to compute a reward at the end of drawing. 'l2', 'dcgan', or 'wgangp'.
+        imsize (int): size of drawn picture image
         max_episode_steps (int): time step length of each drawing process
         rollout_n (int): number of times to rollout the generation process before updating
-        conditional (bool): IF true, the models are assumed to generate / discriminate images with conditional input
-        compute_auxiliary_reward_func (func): function to compute auxiliary rewards
-        act_deterministically (bool): If set true, the agent chooses the most probable actions in act()
         gamma (float): discount factor [0, 1]
         beta (float): weight coefficient for the entropy regularization term
+        gp_lambda (float): scaling factor of the gradient penalty for WGAN-GP
+        lambda_R (float): Scaling parameter of rewards by discriminator
+        staying_penalty (float): auxiliary reward to penalize staying at the same position
+        empty_drawing_penalty (float): auxiliary reward to penalize drawing nothing
+        n_save_final_obs_interval (int): interval to take snapshot of observation
+        outdir (str): path to save final observation snapshots
+        act_deterministically (bool): If set true, the agent chooses the most probable actions in act()
         average_entropy_decay (float): decay to compute moving average of entropy
         average_value_decay (float): decay to compute moving average of value
         process_idx (int): Index of the process
-        gp_lambda (float): scaling factor of the gradient penalty for WGAN-GP
         pi_loss_coef (float): scaling factor of the loss for policy network
         v_loss_coef (float): scaling factor of the loss for value network
-        lambda_R (float): Scaling parameter of rewards by discriminator
-        reward_mode (string): method to compute a reward at the end of drawing. 'l2', 'dcgan', or 'wgangp'.
-        observation_saver (object): class to take snapshots of generated image and the target image during training
     """
     
     process_idx = None
