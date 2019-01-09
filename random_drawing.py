@@ -1,4 +1,4 @@
-from environments import MyPaintEnv
+from chainer_spiral.environments import MyPaintEnv
 import numpy as np
 from gym import wrappers
 import argparse
@@ -47,8 +47,6 @@ if __name__ == '__main__':
 
     if args.image_resolution < 30:
         # save the final observation instead of monitor
-        import matplotlib
-        matplotlib.use('Cairo')
         import matplotlib.pyplot as plt
         plt.imshow(ob['image'])
         plt.savefig('./tmp/random.png')

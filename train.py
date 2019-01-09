@@ -17,7 +17,6 @@ import numpy as np
 import chainer
 import cv2
 
-import matplotlib; matplotlib.use('Cairo')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
@@ -29,15 +28,11 @@ from chainerrl import misc
 from chainerrl.optimizers.nonbias_weight_decay import NonbiasWeightDecay
 from chainerrl.optimizers import rmsprop_async
 
-from environments import MyPaintEnv, ToyEnv
-from agents import spiral
-from utils.arg_utils import load_args, print_args
-from utils.stat_utils import get_model_param_sum
-from dataset.mnist_dataset import MnistDataset
-from dataset.toy_dataset import ToyDataset
-from dataset.emnist_dataset import EMnistDataset
-from dataset.jikei_dataset import JikeiDataset
-from models.spiral import SpiralMnistModel, SpiralToyModel, SpiralMnistDiscriminator, SpiralToyDiscriminator
+from chainer_spiral.environments import MyPaintEnv, ToyEnv
+from chainer_spiral.agents import spiral
+from chainer_spiral.utils.arg_utils import load_args, print_args
+from chainer_spiral.dataset import MnistDataset, ToyDataset, EMnistDataset, JikeiDataset
+from chainer_spiral.models import SpiralMnistModel, SpiralToyModel, SpiralMnistDiscriminator, SpiralToyDiscriminator
 
 def main():
     import logging

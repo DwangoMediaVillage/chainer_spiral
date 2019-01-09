@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-chainer = {ref = "v5.0.0b4", git = "https://github.com/chainer/chainer"}
+chainer = {ref = "v5.0.0b4",git = "https://github.com/chainer/chainer"}
 gym = "*"
 chainerrl = "*"
 pygobject = "*"
@@ -13,6 +13,7 @@ nose = "*"
 matplotlib = "*"
 opencv-python = "*"
 pandas = "*"
+rdp = "*"
 
 [dev-packages]
 ipython = "*"
