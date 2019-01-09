@@ -65,6 +65,7 @@ def plot_action(ax, act, T, init_obs, convert_pos_func, lw=2.0):
     """ plot act to axis for T steps """
     last_prob = init_obs['prob']
     last_x, last_y = convert_pos_func(init_obs['position'])
+    last_y *= -1
     colors = get_colors(T)
 
     for t, color in zip(range(T), colors):
@@ -73,6 +74,7 @@ def plot_action(ax, act, T, init_obs, convert_pos_func, lw=2.0):
         
         # convert discrite position index -> (x, y)
         x, y = convert_pos_func(pos)
+        y *= -1
 
         # may draw a line
         if prob:
