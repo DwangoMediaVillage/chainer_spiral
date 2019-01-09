@@ -36,7 +36,7 @@ weight_decay: 0.0
 
 # total number of discriminator update
 # 'n' means number of discriminator update
-n_update: 100000000000
+n_update: 10000000000000000
 
 # interval to evaluate reward
 n_eval_interval: 10
@@ -62,6 +62,9 @@ max_episode_steps: 10
 # interval to take snapshot
 n_save_interval: 30
 
+# interval to take snapshot of observation
+n_save_final_obs_interval: 10
+
 # auxiliary reward to penalize staying at the same position
 staying_penalty: 0.0
 
@@ -73,7 +76,7 @@ lambda_R: 1.0
 
 # -- dataset settings
 mnist_target_label: null
-mnist_binariazation: false
+mnist_binarization: false
 jikei_npz: 'tmp/jikei_dataset_limited.npz'
 emnist_gz_images: 'tmp/emnist_gzip/emnist-letters-train-images-idx3-ubyte.gz'
 emnist_gz_labels: 'tmp/emnist_gzip/emnist-letters-train-labels-idx1-ubyte.gz'
