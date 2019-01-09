@@ -1,5 +1,3 @@
-"""An example of training SPIRAL with A3C.
-"""
 import argparse
 import yaml
 import os
@@ -11,44 +9,33 @@ os.environ['OMP_NUM_THREADS'] = '1'  # NOQA
 import numpy as np
 import chainer
 
-from chainerrl import experiments
-from chainerrl import misc
-from chainerrl.optimizers.nonbias_weight_decay import NonbiasWeightDecay
-from chainerrl.optimizers import rmsprop_async
-
 from chainer_spiral.environments import MyPaintEnv, ToyEnv
-from chainer_spiral.agents import SPIRAL, SpiralStepHook
+from chainer_spiral.agents import spiral
 from chainer_spiral.utils.arg_utils import load_args, print_args
 from chainer_spiral.dataset import MnistDataset, ToyDataset, EMnistDataset, JikeiDataset, QuickdrawDataset
 from chainer_spiral.models import SpiralMnistModel, SpiralToyModel, SpiralMnistDiscriminator, SpiralToyDiscriminator
 
-def main():
+from chainer_spiral.utils.evaluators import demo_static, demo_movie, demo_many, demo_output_json
+
+
+def demo():
     parser = argparse.ArgumentParser()
-    parser.add_argument('config', help='YAML config file')
-    parser.add_argument('outdir', type=str, help='directory to put training log')
-    parser.add_argument('--profile', action='store_true')
-    parser.add_argument('--load', type=str, default='')
-    parser.add_argument('--logger_level', type=int, default=logging.INFO)
+    parser.add_argument('mode', type=str, choices=['static', 'many', 'movie', 'json'])
+    parser.add_argument('load', type=str, help='target directory to load trained params')
+    parser.add_argument('savename', type=str)
     args = parser.parse_args()
     print_args(args)
     
     # init a logger
-    logging.basicConfig(level=args.logger_level)
+    logging.basicConfig(level=logging.INFO)
 
-    # load yaml config file
-    with open(args.config) as f:
+    # check load dirtectory exists
+    assert os.path.exists(args.load), f"{args.load} does not exist!"
+
+    # load config from load directory
+    with open(os.path.join(args.load, os.pardir, 'config.yaml')) as f:
         config = yaml.load(f)
-
-    # set random seed
-    misc.set_random_seed(config['seed'])
-
-    # create directory to put the results
-    args.outdir = experiments.prepare_output_dir(args, args.outdir)
     
-    # save config file to outdir
-    with open(os.path.join(args.outdir, 'config.yaml'), 'w') as f:
-        yaml.dump(config, f, indent=4, default_flow_style=False)
-
     # define func to create env, target data sampler, and models
     if config['problem'] == 'toy':
         assert config['imsize'] == 3, 'invalid imsize'
@@ -89,7 +76,7 @@ def main():
 
         if config['problem'] == 'mnist':
             single_label = config['mnist_target_label'] is not None
-            dataset = MnistDataset(config['imsize'], single_label, config['mnist_target_label'], config['mnist_binarization'])
+            dataset = MnistDataset(config['imsize'], single_label, config['mnist_target_label'], config['mnist_binirization'])
         elif config['problem'] == 'emnist':
             dataset = EMnistDataset(config['emnist_gz_images'], config['emnist_gz_labels'], config['emnist_single_label'])
         elif config['problem'] == 'jikei':
@@ -113,7 +100,7 @@ def main():
         dis_opt.add_hook(NonbiasWeightDecay(config['weight_decay']))
 
     # init an spiral agent
-    agent = SPIRAL(
+    agent = spiral.SPIRAL(
         generator=gen,
         discriminator=dis,
         gen_optimizer=gen_opt,
@@ -131,53 +118,27 @@ def main():
         staying_penalty=config['staying_penalty'],
         empty_drawing_penalty=config['empty_drawing_penalty'],
         n_save_final_obs_interval=config['n_save_final_obs_interval'],
-        outdir=args.outdir
+        outdir=os.path.join(args.load, os.pardir)
     )
 
     # load from a snapshot
-    if args.load:
-        agent.load(args.load)
+    agent.load(args.load)
 
-    # training mode
-    max_episode_len = config['max_episode_steps'] * config['rollout_n']
-    steps = config['processes'] * config['n_update'] * max_episode_len
-    
-    save_interval = config['processes'] * config['n_save_interval'] * max_episode_len
-    eval_interval = config['processes'] * config['n_eval_interval'] * max_episode_len
-    
-    step_hook = SpiralStepHook(config['max_episode_steps'], save_interval, args.outdir)
+    # run demo
+    env = make_env(0, True)
+   
+    suptitle = args.load
 
-    if config['processes'] == 1:
-        # single process for easy to debug
-        agent.process_idx = 0
-        env = make_env(0, False)
-
-        experiments.train_agent_with_evaluation(
-            agent=agent,
-            outdir=args.outdir,
-            env=env,
-            steps=steps,
-            eval_n_runs=config['eval_n_runs'],
-            eval_interval=eval_interval,
-            max_episode_len=max_episode_len,
-            step_hooks=[step_hook],
-            save_best_so_far_agent=False
-        )
+    if args.mode == 'static':
+        demo_static(env, agent, config, args.savename, suptitle, dataset, plot_act=config['problem'] != 'toy')
+    elif args.mode == 'movie':
+        demo_movie(env, agent, config, args.savename, suptitle, dataset, plot_act=config['problem'] != 'toy')
+    elif args.mode == 'many':
+        demo_many(env, agent, config, args.savename, suptitle, dataset)
+    elif args.mode == 'json':
+        demo_output_json(env, agent, config, args.savename, dataset)
     else:
-        experiments.train_agent_async(
-            agent=agent,
-            outdir=args.outdir,
-            processes=config['processes'],
-            make_env=make_env,
-            profile=args.profile,
-            steps=steps,
-            eval_n_runs=config['eval_n_runs'],
-            eval_interval=eval_interval,
-            max_episode_len=max_episode_len,
-            global_step_hooks=[step_hook],
-            save_best_so_far_agent=False
-        )
+        raise NotImplementedError('Invalid demo mode')
 
 if __name__ == '__main__':
-    main()
-
+    demo()

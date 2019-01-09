@@ -9,7 +9,6 @@ standard_library.install_aliases()  # NOQA
 import numpy as np
 import json
 
-# TODO (enhancement): Support Windows
 import matplotlib
 matplotlib.use('Cairo')
 
@@ -75,8 +74,6 @@ def plot_action(ax, act, T, init_obs, convert_pos_func, lw=2.0):
         # convert discrite position index -> (x, y)
         x, y = convert_pos_func(pos)
 
-        y *= -1
-
         # may draw a line
         if prob:
             ax.plot([last_x, x], [last_y, y], color=color, lw=lw)
@@ -88,9 +85,8 @@ def plot_action(ax, act, T, init_obs, convert_pos_func, lw=2.0):
     set_plot_scale(ax)
 
     
-def plot_image(ax, x, vmin=0, vmax=1, cmap='gray', origin='lower'):
-    # origin of Cairo backend is different from gtk backend
-    return ax.imshow(x, vmin=vmin, vmax=vmax, cmap=cmap, origin=origin)
+def plot_image(ax, x, vmin=0, vmax=1, cmap='gray'):
+    return ax.imshow(x, vmin=vmin, vmax=vmax, cmap=cmap)
 
 def run_single_episode(env, agent, max_episode_steps, conditional_input=None):
     obs, act = {} , {}
@@ -129,14 +125,14 @@ def run_episode(env, agent, N, max_episode_steps, conditional=False, dataset=Non
         return obs, act
 
 
-def demo_static(env, agent, args, savename, suptitle, dataset, n_row=5, plot_act=True):
+def demo_static(env, agent, config, savename, suptitle, dataset, n_row=5, plot_act=True):
     """ render drawn picture and lines colored by ordering """
     fig = plt.figure(figsize=(7, 7))
-    if args.conditional:
+    if config['conditional']:
         # conditional generation
         gs = gridspec.GridSpec(n_row, 3)
-        obs, act, cond = run_episode(env, agent, n_row, args.max_episode_steps, 
-                                conditional=True, dataset=dataset)
+        obs, act, cond = run_episode(env, agent, n_row, config['max_episode_steps'], 
+                                conditional=config['conditional'], dataset=dataset)
         for n in range(n_row):
             # conditional input
             ax_cond = plt.subplot(gs[n, 0])
@@ -147,32 +143,32 @@ def demo_static(env, agent, args, savename, suptitle, dataset, n_row=5, plot_act
 
             # final obs
             ax_obs = plt.subplot(gs[n, 1])
-            ax_obs.imshow(obs[n][args.max_episode_steps]['image'], origin=None)
+            ax_obs.imshow(obs[n][config['max_episode_steps']]['image'])
             set_axis_prop(ax_obs)
             if n == 0: ax_obs.set_title('Final observation')
             
             # plot act
             if plot_act:
                 ax_act = plt.subplot(gs[n, 2])
-                plot_action(ax_act, act[n], args.max_episode_steps, obs[n][0], env.convert_x)
+                plot_action(ax_act, act[n], config['max_episode_steps'], obs[n][0], env.convert_x)
                 set_axis_prop(ax_act)
                 if n == 0: ax_act.set_title('Line colored by order')
         
     else:
         # unconditional generation
         gs = gridspec.GridSpec(n_row, 2)
-        obs, act = run_episode(env, agent, n_row, args.max_episode_steps)
+        obs, act = run_episode(env, agent, n_row, config['max_episode_steps'])
         for n in range(n_row):
             # final obs
             ax_obs = plt.subplot(gs[n, 0])
-            ax_obs.imshow(obs[n][args.max_episode_steps]['image'], origin='lower')
+            ax_obs.imshow(obs[n][config['max_episode_steps']]['image'])
             set_axis_prop(ax_obs)
             if n == 0: ax_obs.set_title('Final observation')
             
             # plot act
             if plot_act:
                 ax_act = plt.subplot(gs[n, 1])
-                plot_action(ax_act, act[n], args.max_episode_steps, obs[n][0], env.convert_x)
+                plot_action(ax_act, act[n], config['max_episode_steps'], obs[n][0], env.convert_x)
                 set_axis_prop(ax_act)
                 if n == 0: ax_act.set_title('Line colored by order')
 
@@ -180,63 +176,63 @@ def demo_static(env, agent, args, savename, suptitle, dataset, n_row=5, plot_act
     fig.suptitle(suptitle)
     plt.savefig(savename)
 
-def demo_movie(env, agent, args, savename, suptitle, dataset, n_row=5, plot_act=True):
+def demo_movie(env, agent, config, savename, suptitle, dataset, n_row=5, plot_act=True):
     """ render movie of drawn picture, final observation, and lines colored by ordering """
     fig = plt.figure(figsize=(7, 7))
     ims = []
-    if args.conditional:
+    if config['conditional']:
         # conditional generation
         gs = gridspec.GridSpec(n_row, 4)
-        obs, act, cond = run_episode(env, agent, n_row, args.max_episode_steps, 
+        obs, act, cond = run_episode(env, agent, n_row, config['max_episode_steps'], 
                                 conditional=True, dataset=dataset)
         for n in range(n_row):
             # conditional input
             ax_cond = plt.subplot(gs[n, 0])
             # conditional input is assumed to be chainer.Variable whose shape is [1, 1, H, W], and value range is [0, 1].
-            im = plot_image(ax_cond, cond[n].data[0, 0], origin=None)
+            im = plot_image(ax_cond, cond[n].data[0, 0])
             set_axis_prop(ax_cond)
             if n == 0: ax_cond.set_title('Input')
 
             # obs
             ax_movie = plt.subplot(gs[n, 1])
-            im = ax_movie.imshow(obs[n][0]['image'], origin='lower')  # image at t=0
+            im = ax_movie.imshow(obs[n][0]['image'])  # image at t=0
             ims.append(im)
             if n == 0: ax_movie.set_title('Movie')
             
             # final obs
             ax_obs = plt.subplot(gs[n, 2])
-            ax_obs.imshow(obs[n][args.max_episode_steps]['image'], origin='lower')
+            ax_obs.imshow(obs[n][config['max_episode_steps']]['image'])
             set_axis_prop(ax_obs)
             if n == 0: ax_obs.set_title('Final observation')
             
             # plot act
             if plot_act:
                 ax_act = plt.subplot(gs[n, 3])
-                plot_action(ax_act, act[n], args.max_episode_steps, obs[n][0], env.convert_x)
+                plot_action(ax_act, act[n], config['max_episode_steps'], obs[n][0], env.convert_x)
                 set_axis_prop(ax_act)
                 if n == 0: ax_act.set_title('Line colored by order')
         
     else:
         # unconditional generation
         gs = gridspec.GridSpec(n_row, 3)
-        obs, act = run_episode(env, agent, n_row, args.max_episode_steps)
+        obs, act = run_episode(env, agent, n_row, config['max_episode_steps'])
         for n in range(n_row):
             # obs
             ax_movie = plt.subplot(gs[n, 0])
-            im = ax_movie.imshow(obs[n][0]['image'], origin='lower')  # image at t=0
+            im = ax_movie.imshow(obs[n][0]['image'])  # image at t=0
             ims.append(im)
             if n == 0: ax_movie.set_title('Movie')
             
             # final obs
             ax_obs = plt.subplot(gs[n, 1])
-            ax_obs.imshow(obs[n][args.max_episode_steps]['image'], origin='lower')
+            ax_obs.imshow(obs[n][config['max_episode_steps']]['image'])
             set_axis_prop(ax_obs)
             if n == 0: ax_obs.set_title('Final observation')
             
             # plot act
             if plot_act:
                 ax_act = plt.subplot(gs[n, 2])
-                plot_action(ax_act, act[n], args.max_episode_steps, obs[n][0], env.convert_x)
+                plot_action(ax_act, act[n], config['max_episode_steps'], obs[n][0], env.convert_x)
                 set_axis_prop(ax_act)
                 if n == 0: ax_act.set_title('Line colored by order')
 
@@ -246,17 +242,17 @@ def demo_movie(env, agent, args, savename, suptitle, dataset, n_row=5, plot_act=
         for n, im in enumerate(ims):
             im.set_data(obs[n][t]['image'])
         return ims
-    ani = anim.FuncAnimation(fig, frame_func, frames=range(0, args.max_episode_steps + 1), interval=100)
+    ani = anim.FuncAnimation(fig, frame_func, frames=range(0, config['max_episode_steps'] + 1), interval=100)
     ani.save(savename)
 
 
-def demo_many(env, agent, args, savename, suptitle, dataset, n_row=10, n_col=5):
+def demo_many(env, agent, config, savename, suptitle, dataset, n_row=10, n_col=5):
     """ render many final observations """
     fig = plt.figure(figsize=(7, 7))
-    if args.conditional:
+    if config['conditional']:
         # conditional generation
         gs = gridspec.GridSpec(n_row, n_col * 2)
-        obs, act, cond = run_episode(env, agent, n_row * n_col, args.max_episode_steps, 
+        obs, act, cond = run_episode(env, agent, n_row * n_col, config['max_episode_steps'], 
                                 conditional=True, dataset=dataset)
         n = 0
         for i in range(n_row):
@@ -270,7 +266,7 @@ def demo_many(env, agent, args, savename, suptitle, dataset, n_row=10, n_col=5):
 
                 # generated image
                 ax = plt.subplot(gs[i, j + 1])
-                ax.imshow(obs[n][args.max_episode_steps]['image'], origin='lower')
+                ax.imshow(obs[n][config['max_episode_steps']]['image'])
                 set_axis_prop(ax)
                 if i == 0: ax.set_title('Reconst')
 
@@ -278,12 +274,12 @@ def demo_many(env, agent, args, savename, suptitle, dataset, n_row=10, n_col=5):
     else:
         # conditional generation
         gs = gridspec.GridSpec(n_row, n_col * 2)
-        obs, act = run_episode(env, agent, n_row * n_col * 2, args.max_episode_steps)
+        obs, act = run_episode(env, agent, n_row * n_col * 2, config['max_episode_steps'])
         n = 0
         for i in range(n_row):
             for j in range(n_col * 2):
                 ax = plt.subplot(gs[i, j])
-                ax.imshow(obs[n][args.max_episode_steps]['image'], origin='lower')
+                ax.imshow(obs[n][config['max_episode_steps']]['image'])
                 set_axis_prop(ax)
                 n += 1
 
@@ -292,7 +288,7 @@ def demo_many(env, agent, args, savename, suptitle, dataset, n_row=10, n_col=5):
     plt.savefig(savename)
 
 
-def demo_output_json(env, agent, args, savename, dataset, N=100):
+def demo_output_json(env, agent, config, savename, dataset, N=100):
     """ run N generations and serializes actions as a json file """
 
     def convert_action_to_serialize(action):
@@ -304,15 +300,15 @@ def demo_output_json(env, agent, args, savename, dataset, N=100):
         q = action['prob']
         return [x, y, p, r, g, b, q]
 
-    if args.conditional:
-        _, actions, _ = run_episode(env, agent, N, args.max_episode_steps, conditional=True, dataset=dataset)
+    if config['conditional']:
+        _, actions, _ = run_episode(env, agent, N, config['max_episode_steps'], conditional=True, dataset=dataset)
     else:
-        _, actions = run_episode(env, agent, N, args.max_episode_steps)
+        _, actions = run_episode(env, agent, N, config['max_episode_steps'])
 
     alldata = []
     for action in actions:
         data = []
-        for t in range(args.max_episode_steps):
+        for t in range(config['max_episode_steps']):
             data.append(convert_action_to_serialize(action[t]))
         alldata.append(data)
     
