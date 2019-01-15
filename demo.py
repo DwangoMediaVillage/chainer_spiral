@@ -76,7 +76,7 @@ def demo():
 
         if config['problem'] == 'mnist':
             single_label = config['mnist_target_label'] is not None
-            dataset = MnistDataset(config['imsize'], single_label, config['mnist_target_label'], config['mnist_binirization'])
+            dataset = MnistDataset(config['imsize'], single_label, config['mnist_target_label'], config['mnist_binarization'])
         elif config['problem'] == 'emnist':
             dataset = EMnistDataset(config['emnist_gz_images'], config['emnist_gz_labels'], config['emnist_single_label'])
         elif config['problem'] == 'jikei':
