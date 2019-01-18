@@ -16,7 +16,7 @@ pos_resolution: 32
 seed: 0
 
 # number of actors
-processes: 64
+processes: 12
 
 # conditional generation or not
 conditional: false
