@@ -21,7 +21,7 @@ def preprocess_obs(obs, imsize):
     c = preprocess_image(c)
 
     # position
-    x /= float(imsize)
+    x /= float(imsize * imsize)
     x = np.asarray(x, dtype=np.float32) 
     x = np.reshape(x, (1, 1))
 
