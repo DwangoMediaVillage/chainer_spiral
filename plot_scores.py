@@ -60,6 +60,8 @@ def plot_score(args):
         steps = steps[:cut_idx]
         elapsed = steps[:cut_idx]
 
+    logger.info(f"num_log per step = {1000 * len(steps) / steps[-1]}")
+
     # fix order
     if steps.max() > 100000:
         steps = steps / 1000
