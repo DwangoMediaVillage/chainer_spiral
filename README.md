@@ -13,6 +13,7 @@ Chainer implementation of Synthesizing Programs for Images using Reinforced Adve
 2. Build mypaint: `https://github.com/mypaint/mypaint`, and run `python setup.py test` to produce a shared library file.
 3. Append the path of mypaint directory to `.env`'s PYTHONPATH
 4. Append the path of a brush file (`myb`) to `.env`'s BRUSHINFO (e.g. `BRUSHINFO=settings/my_simple_brush.myb`)
+5. Append the path of this directroy to `.env`'s PYTHONPATH 
 
 ## How to run
 

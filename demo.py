@@ -1,3 +1,5 @@
+"""Drawing pictures using a trained model.
+"""
 import argparse
 import yaml
 import os

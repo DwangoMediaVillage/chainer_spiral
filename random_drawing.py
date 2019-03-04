@@ -1,3 +1,5 @@
+"""Drawing a picture by a random agent
+"""
 from chainer_spiral.environments import MyPaintEnv
 import numpy as np
 from gym import wrappers

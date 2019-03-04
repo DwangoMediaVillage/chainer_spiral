@@ -1,3 +1,5 @@
+""" Helper tool to convert animation from snaphosts of png images, using ImageMagick.
+"""
 import glob
 import argparse
 import os

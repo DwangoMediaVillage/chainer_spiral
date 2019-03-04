@@ -1,3 +1,5 @@
+"""Preprocess a npz file of QuickDraw! Dataset (https://github.com/googlecreativelab/quickdraw-dataset)
+"""
 import argparse
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as girdspec
