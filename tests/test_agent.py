@@ -1,10 +1,10 @@
 from nose.tools import eq_
 import os
-from agents import spiral
-from models.spiral import SpiralToyDiscriminator, SpiralToyModel
-from environments import ToyEnv
+from chainer_spiral.agents import spiral
+from chainer_spiral.models.spiral import SpiralToyDiscriminator, SpiralToyModel
+from chainer_spiral.environments import ToyEnv
 from chainerrl.optimizers import rmsprop_async
-from dataset.toy_dataset import ToyDataset
+from chainer_spiral.dataset.toy_dataset import ToyDataset
 
 def init_agent():
     # initialize an agent
@@ -18,34 +18,26 @@ def init_agent():
     D_opt.setup(D)
     p = [(1, 4, 7)]
     dataset = ToyDataset(imsize, p, p)
-    def process_image():
-        pass
-    def preprocess_image():
-        pass
-    def preprocess_obs():
-        pass
-    def pack_action():
-        pass
-    def compute_auxiliary_reward():
-        pass
-
-    timestep_limit = 3
-    rollout_n = 1
-    conditional = True
-
+    
     agent = spiral.SPIRAL(
         generator=G,
         discriminator=D,
         gen_optimizer=G_opt,
         dis_optimizer=D_opt,
         dataset=dataset,
-        preprocess_image_func=preprocess_image,
-        preprocess_obs_func=preprocess_obs,
-        pack_action_func=pack_action,
-        timestep_limit=timestep_limit,
-        rollout_n=rollout_n,
-        conditional=conditional,
-        compute_auxiliary_reward_func=compute_auxiliary_reward)
+        conditional=True,
+        reward_mode='wgangp',
+        imsize=imsize,
+        max_episode_steps=3,
+        rollout_n=1,
+        gamma=0.99,
+        beta=0.001,
+        gp_lambda=10.0,
+        lambda_R=1.0,
+        staying_penalty=10.0,
+        empty_drawing_penalty=1.0,
+        n_save_final_obs_interval=10000,
+        outdir='/tmp/chainer_spiral_test')
     return agent
 
 def test_save_and_load():

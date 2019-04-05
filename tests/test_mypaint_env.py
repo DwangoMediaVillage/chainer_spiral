@@ -1,4 +1,4 @@
-from environments.mypaint_env import MyPaintEnv
+from chainer_spiral.environments.mypaint_env import MyPaintEnv
 from nose.tools import eq_
 
 def test_init_env():

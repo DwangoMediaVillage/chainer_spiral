@@ -14,11 +14,11 @@ def test_import_chainerrl():
 
 def test_import_spiral():
     # try to import spiral env
-    from environments import MyPaintEnv
+    from chainer_spiral.environments import MyPaintEnv
 
     # try to import spiral agent
-    from agents.spiral import SPIRALModel, SPIRAL
+    from chainer_spiral.agents.spiral import SPIRAL
 
     # try to import spiral models
-    from models.spiral import SpiralToyModel, SpiralToyDiscriminator
-    from models.spiral import SpiralMnistModel, SpiralMnistDiscriminator
+    from chainer_spiral.models.spiral import SpiralToyModel, SpiralToyDiscriminator
+    from chainer_spiral.models.spiral import SpiralMnistModel, SpiralMnistDiscriminator
