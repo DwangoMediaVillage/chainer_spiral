@@ -2,7 +2,7 @@ import chainer
 import cv2
 import numpy as np
 import math
-from environments import ToyEnv
+from chainer_spiral.environments import ToyEnv
 from chainer import functions as F
 
 

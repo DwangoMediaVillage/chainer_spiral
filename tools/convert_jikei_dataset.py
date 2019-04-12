@@ -1,3 +1,5 @@
+"""Convert jikei images (http://codh.rois.ac.jp/char-shape/book/) into npz file.
+"""
 import numpy as np
 import cv2
 import glob

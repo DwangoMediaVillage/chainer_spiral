@@ -2,7 +2,6 @@ import chainer
 import cv2
 import numpy as np
 import math
-from environments import ToyEnv
 from chainer import functions as F
 
 
@@ -34,7 +33,7 @@ class MnistDataset(chainer.dataset.DatasetMixin):
         if train:
             x = self.train_iter.next()
         else:
-            x = self.train_iter.next()
+            x = self.test_iter.next()
         return self.__preprocess_image(x)
 
     def __filter_single_class(self, xs, label):
@@ -57,13 +56,13 @@ class MnistDataset(chainer.dataset.DatasetMixin):
 
     def __preprocess_image(self, x):
         """ convert a mnist image to a batch """
-        x = x[0][0] * 255.0  # (28, 28), [0, 255.0]
-        x = x.astype(np.uint8)
+        x = x[0][0]
+        x = np.reshape(x, (28, 28))
         x = cv2.resize(x, (self.imsize, self.imsize))
         if self.binarization:
             thresh = 255 / 2.0
             _, x = cv2.threshold(x, thresh, 1.0, cv2.THRESH_BINARY)
-        x = np.reshape(x, (1, 1, self.imsize, self.imsize)).astype(np.float32) / 255.0
+        x = np.reshape(x, (1, 1, self.imsize, self.imsize))
         x = 1.0 - x  # background black -> white
         return chainer.Variable(x)
 

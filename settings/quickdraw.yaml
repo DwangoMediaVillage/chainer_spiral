@@ -1,0 +1,84 @@
+# default setting of train.py
+
+# type of dataset. toy, mnist, emnist, jieki, or quickdraw are supported
+problem: quickdraw
+
+# size of picture image
+imsize: 64
+
+# number of channels
+in_channel: 1
+
+# resolution of pen's position
+pos_resolution: 32
+
+# random seed
+seed: 0
+
+# number of actors
+processes: 12
+
+# conditional generation or not
+conditional: false
+
+# mode to compute reward. l2, dcgan, or wgangp
+reward_mode: 'wgangp'
+
+# brush definition file for mypaint env
+brush_info_file: 'settings/my_simple_brush.myb'
+
+# -- training parameters
+# learning rate
+lr: 0.0001
+
+# weight decay to update generator and discriminator
+weight_decay: 0.0
+
+# total number of discriminator update
+# 'n' means number of discriminator update
+n_update: 10000000000000000
+
+# interval to evaluate reward
+n_eval_interval: 10
+
+# number of times to run evaluation episodes
+eval_n_runs: 1
+
+# number of generating episodes before update discriminator
+rollout_n: 20
+
+# discount factor
+gamma: 0.99
+
+# beta of A3C agent
+beta: 0.001
+
+# gradient penalty for WGAN-GP
+gp_lambda: 10.0
+
+# length of each drawing sequence
+max_episode_steps: 10
+
+# interval to take snapshot
+n_save_interval: 30
+
+# interval to take snapshot of observation
+n_save_final_obs_interval: 10
+
+# auxiliary reward to penalize staying at the same position
+staying_penalty: 0.0
+
+# auxiliary reward to penalize drawing nothing
+empty_drawing_penalty: 10.0
+
+# scaling factor of reward by discriminator
+lambda_R: 1.0
+
+# -- dataset settings
+mnist_target_label: null
+mnist_binarization: false
+jikei_npz: 'tmp/jikei_dataset_limited.npz'
+emnist_gz_images: 'tmp/emnist_gzip/emnist-letters-train-images-idx3-ubyte.gz'
+emnist_gz_labels: 'tmp/emnist_gzip/emnist-letters-train-labels-idx1-ubyte.gz'
+emnist_single_label: true
+quickdraw_npz: 'tmp/quickdraw_apple.npz'

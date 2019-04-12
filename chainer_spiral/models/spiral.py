@@ -16,7 +16,6 @@ from chainerrl.recurrent import RecurrentChainMixin
 
 from chainer import functions as F
 from chainer import links as L
-from agents import spiral
 from chainerrl.distribution import SoftmaxDistribution
 
 def bw_linear(x_in, x, l):
@@ -29,6 +28,16 @@ def bw_convolution(x_in, x, l):
 
 def bw_leaky_relu(x_in, x, a):
     return (x_in.data > 0) * x + a * (x_in.data < 0) * x
+
+
+class SPIRALModel(chainer.Link, RecurrentChainMixin):
+    """ SPIRAL Model. """
+    def pi_and_v(self, obs):
+        """ evaluate the policy and the V-function """
+        return NotImplementedError()
+    
+    def __call__(self, obs):
+        return self.pi_and_v(obs)
 
 
 class AutoregressiveDecoder(chainer.Chain):
@@ -351,7 +360,7 @@ class ToyValueNet(chainer.Chain):
         return h
 
 
-class SpiralMnistModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixin):
+class SpiralMnistModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
     """ Model for mnist drawing """
     def __init__(self, imsize, conditional):
         # define policy and value networks
@@ -364,7 +373,7 @@ class SpiralMnistModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixi
         return self.pi(state, conditional_input), self.v(state, conditional_input)
 
 
-class SpiralToyModel(chainer.ChainList, spiral.SPIRALModel, RecurrentChainMixin):
+class SpiralToyModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
     """ A simple model """
     def __init__(self, imsize, conditional):
         # define policy and value networks

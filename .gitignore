@@ -5,6 +5,8 @@ matplotlibrc
 # ignore results direcotrey created by chainerRL
 results/
 tmp/
+tmp_*
+
 
 # Created by https://www.gitignore.io/api/vim,macos,emacs,python,visualstudiocode
 
