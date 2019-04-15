@@ -1,9 +1,8 @@
 import chainer
 import cv2
 import numpy as np
-import math
+
 from chainer_spiral.environments import ToyEnv
-from chainer import functions as F
 
 
 class ToyDataset(chainer.dataset.DatasetMixin):
@@ -22,8 +21,8 @@ class ToyDataset(chainer.dataset.DatasetMixin):
         self.train, self.test = self.__get_data()
 
     def __get_data(self):
-        train = [ self.__create_target_data(pattern) for pattern in self.train_patterns ]
-        test = [ self.__create_target_data(pattern) for pattern in self.test_patterns ]
+        train = [self.__create_target_data(pattern) for pattern in self.train_patterns]
+        test = [self.__create_target_data(pattern) for pattern in self.test_patterns]
         return train, test
 
     def __create_target_data(self, pattern):
@@ -35,7 +34,7 @@ class ToyDataset(chainer.dataset.DatasetMixin):
 
     def __len__(self):
         return len(self.train)
-    
+
     def get_example(self, train=True):
         if train:
             i = np.random.randint(len(self.train))
@@ -43,7 +42,7 @@ class ToyDataset(chainer.dataset.DatasetMixin):
         else:
             i = np.random.randint(len(self.test))
             return self.__preprocess_image(self.test[i])
-    
+
     def __preprocess_image(self, x):
         x = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY)
         x = x.astype(np.float32) / 255.

@@ -1,6 +1,7 @@
 import chainer
 import numpy as np
 
+
 class JikeiDataset(chainer.dataset.DatasetMixin):
     """ Koten Jikei dataset. get_exmaple() returns a batch which has a converted mnist image 
         as chainer.Variable whose value range is [0, 1]
@@ -28,6 +29,3 @@ class JikeiDataset(chainer.dataset.DatasetMixin):
         x = np.expand_dims(x, 0)
         x = np.expand_dims(x, 0)
         return chainer.Variable(x)
-
-
-

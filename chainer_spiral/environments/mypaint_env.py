@@ -1,17 +1,12 @@
-import gym
+import logging
 import os
 
-from lib import mypaintlib
-from lib import tiledsurface
-from lib import brush
-from lib import pixbufsurface
+import gym
 import numpy as np
-
-import logging
-import time
-import math
-
 from gym import spaces
+
+from lib import brush, mypaintlib, pixbufsurface, tiledsurface
+
 
 class MyPaintEnv(gym.Env):
     action_space = None
@@ -23,7 +18,14 @@ class MyPaintEnv(gym.Env):
         'render.modes': ['human', 'rgb_array'],
     }
 
-    def __init__(self, logger=None, imsize=64, bg_color=None, max_episode_steps=10, pos_resolution=32, brush_info_file=None, start_x=0):
+    def __init__(self,
+                 logger=None,
+                 imsize=64,
+                 bg_color=None,
+                 max_episode_steps=10,
+                 pos_resolution=32,
+                 brush_info_file=None,
+                 start_x=0):
         """ initialize environment """
         super().__init__()
 
@@ -43,19 +45,28 @@ class MyPaintEnv(gym.Env):
 
         # action space
         self.action_space = spaces.Dict({
-            'position': spaces.Discrete(self.pos_resolution ** 2),
-            'pressure': spaces.Box(low=0, high=1.0, shape=(), dtype=float),
-            'color': spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
-            'prob': spaces.Discrete(2)
+            'position':
+            spaces.Discrete(self.pos_resolution**2),
+            'pressure':
+            spaces.Box(low=0, high=1.0, shape=(), dtype=float),
+            'color':
+            spaces.Box(low=0, high=1.0, shape=(3, ), dtype=float),
+            'prob':
+            spaces.Discrete(2)
         })
 
         # observation space
         self.observation_space = spaces.Dict({
-            'image': spaces.Box(low=0, high=255, shape=(self.imsize, self.imsize, 3), dtype=np.uint8),
-            'position': spaces.Discrete(self.pos_resolution ** 2),
-            'pressure': spaces.Box(low=0, high=1.0, shape=(), dtype=float),
-            'color': spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
-            'prob': spaces.Discrete(1)
+            'image':
+            spaces.Box(low=0, high=255, shape=(self.imsize, self.imsize, 3), dtype=np.uint8),
+            'position':
+            spaces.Discrete(self.pos_resolution**2),
+            'pressure':
+            spaces.Box(low=0, high=1.0, shape=(), dtype=float),
+            'color':
+            spaces.Box(low=0, high=1.0, shape=(3, ), dtype=float),
+            'prob':
+            spaces.Discrete(1)
         })
 
         # color of the background
@@ -64,7 +75,7 @@ class MyPaintEnv(gym.Env):
         else:
             self.bg_color = bg_color
 
-        # open brush 
+        # open brush
         if brush_info_file is None:
             brush_info_file = os.getenv('BRUSHINFO')
             if brush_info_file is None:
@@ -106,23 +117,24 @@ class MyPaintEnv(gym.Env):
         else:
             self.brush.reset()
             self.__draw(x, 0.0)
-        
+
         # Fake reward and done flag
         reward = 0.0
         done = False
 
         # create observation: current drawn picture image and the input action
-        ob = {'image': self._get_rgb_array(),
-                'position': x,
-                'pressure': p,
-                'color': color,
-                'prob': q
-            }
+        ob = {
+            'image': self._get_rgb_array(),
+            'position': x,
+            'pressure': p,
+            'color': color,
+            'prob': q
+        }
         return ob, reward, done, {}
 
     def convert_x(self, x):
         """ convert position id -> a point (p1, p2) """
-        assert x < self.pos_resolution ** 2
+        assert x < self.pos_resolution**2
         p1 = (x % self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
         p2 = (x // self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
         return int(p1), int(p2)
@@ -130,17 +142,8 @@ class MyPaintEnv(gym.Env):
     def __draw(self, x, pressure, xtilt=0, ytilt=0, dtime=0.1, viewzoom=1.0, viewrotation=0.0):
         p1, p2 = self.convert_x(x)
         self.surface.begin_atomic()
-        self.brush.stroke_to(
-            self.surface.backend,
-            p1,
-            p2,
-            pressure,
-            xtilt,
-            ytilt,
-            dtime,
-            viewzoom,
-            viewrotation
-        )
+        self.brush.stroke_to(self.surface.backend, p1, p2, pressure, xtilt, ytilt, dtime, viewzoom,
+                             viewrotation)
         self.surface.end_atomic()
 
         # update the current point
@@ -149,30 +152,32 @@ class MyPaintEnv(gym.Env):
     def reset(self):
         """ clear all the content on the canvas, move the current position to the default """
         self.logger.debug('reset the drawn picture')
-        
+
         # clear content on the canvas
         self.surface.clear()
 
         # fill the canvas with the background color
-        with self.surface.cairo_request(0, 0, self.imsize + self.tile_offset * 2, self.imsize + self.tile_offset * 2) as cr:
+        with self.surface.cairo_request(0, 0, self.imsize + self.tile_offset * 2,
+                                        self.imsize + self.tile_offset * 2) as cr:
             r, g, b = self.bg_color
             cr.set_source_rgb(r, g, b)
-            cr.rectangle(self.tile_offset, self.tile_offset, self.imsize + self.tile_offset * 2, self.imsize + self.tile_offset * 2)
+            cr.rectangle(self.tile_offset, self.tile_offset, self.imsize + self.tile_offset * 2,
+                         self.imsize + self.tile_offset * 2)
             cr.fill()
 
         # set the pen's initial position
         self.brush.reset()
         self.__draw(self.start_x, 0)
         self.x = self.start_x
-        
 
         # create observation: current drawn picture image and the input action
-        ob = {'image': self._get_rgb_array(),
-                'position': self.start_x,
-                'pressure': 0.0,
-                'color': self.start_color,
-                'prob': 0
-            }
+        ob = {
+            'image': self._get_rgb_array(),
+            'position': self.start_x,
+            'pressure': 0.0,
+            'color': self.start_color,
+            'prob': 0
+        }
         return ob
 
     def render(self, mode='human'):
@@ -188,7 +193,6 @@ class MyPaintEnv(gym.Env):
         else:
             raise NotImplementedError
 
-
     def _get_rgb_array(self, cut=True):
         """ render the current canvas as a rgb array
         """
@@ -202,8 +206,8 @@ class MyPaintEnv(gym.Env):
 
         # cut out the canvas
         if cut:
-            img = img[self.tile_offset:self.tile_offset+self.imsize,
-                    self.tile_offset:self.tile_offset+self.imsize, :]
+            img = img[self.tile_offset:self.tile_offset +
+                      self.imsize, self.tile_offset:self.tile_offset + self.imsize, :]
 
         return img
 
@@ -211,12 +215,12 @@ class MyPaintEnv(gym.Env):
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
-    
+
     def seed(self, seed=None):
         # TODO: implement here
         pass
-        
-    
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)

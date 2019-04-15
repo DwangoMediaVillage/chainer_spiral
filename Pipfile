@@ -20,11 +20,15 @@ pyyaml = "*"
 ipython = "*"
 ipdb = "*"
 pylint = "*"
+yapf = "*"
+autoflake = "*"
+isort = "*"
 
 [requires]
 python_version = "3.6"
 
 [scripts]
+isort = "isort -rc ."
+autoflake = "autoflake . -r --in-place --remove-all-unused-imports --remove-unused-variables"
+yapf = "yapf -ir . --style='{column_limit: 100}'"
 test = "nosetests tests"
-random = "python random_drawing.py"
-debug = "python train.py tmp_debug.yaml tmp/debug"

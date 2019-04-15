@@ -1,29 +1,29 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from builtins import *  # NOQA
-from future import standard_library
-standard_library.install_aliases()  # NOQA
+from __future__ import (absolute_import, division, print_function, unicode_literals)
+
 import os
+from builtins import *  # NOQA
+
+import chainer
+import numpy as np
+from chainer import functions as F
+from chainer import links as L
+from chainerrl.distribution import SoftmaxDistribution
+from chainerrl.recurrent import RecurrentChainMixin
+from future import standard_library
+
+standard_library.install_aliases()  # NOQA
 
 # This prevents numpy from using multiple threads
 os.environ['OMP_NUM_THREADS'] = '1'  # NOQA
 
-import numpy as np
-import chainer
-from chainerrl.recurrent import RecurrentChainMixin
-
-from chainer import functions as F
-from chainer import links as L
-from chainerrl.distribution import SoftmaxDistribution
 
 def bw_linear(x_in, x, l):
     return F.matmul(x, l.W)
 
 
 def bw_convolution(x_in, x, l):
-    return F.deconvolution_2d(x, l.W, None, l.stride, l.pad, (x_in.data.shape[2], x_in.data.shape[3]))
+    return F.deconvolution_2d(x, l.W, None, l.stride, l.pad,
+                              (x_in.data.shape[2], x_in.data.shape[3]))
 
 
 def bw_leaky_relu(x_in, x, a):
@@ -32,10 +32,11 @@ def bw_leaky_relu(x_in, x, a):
 
 class SPIRALModel(chainer.Link, RecurrentChainMixin):
     """ SPIRAL Model. """
+
     def pi_and_v(self, obs):
         """ evaluate the policy and the V-function """
         return NotImplementedError()
-    
+
     def __call__(self, obs):
         return self.pi_and_v(obs)
 
@@ -73,7 +74,7 @@ class AutoregressiveDecoder(chainer.Chain):
         a1 = p1.sample()
 
         # decode prob
-        h_a1 = self.f(self.l1_l1( np.expand_dims(a1.data, 0).astype(np.float32)))
+        h_a1 = self.f(self.l1_l1(np.expand_dims(a1.data, 0).astype(np.float32)))
         h_a1 = F.concat((z1, h_a1), axis=1)
 
         z2 = self.f(self.l1_l2(h_a1))
@@ -101,7 +102,7 @@ class SpiralMnistDiscriminator(chainer.Chain):
             self.c5 = L.Convolution2D(48, 64, stride=2, ksize=2, pad=1)
             self.c6 = L.Convolution2D(64, 64, stride=2, ksize=2, pad=1)
             self.l7 = L.Linear(3 * 3 * 64, 1)
-        
+
     def __call__(self, x, conditional_input=None):
         if self.conditional:
             self.x = F.concat((x, conditional_input), axis=1)
@@ -115,7 +116,7 @@ class SpiralMnistDiscriminator(chainer.Chain):
         self.h5 = F.leaky_relu(self.c5(self.h4))
         self.h6 = F.leaky_relu(self.c6(self.h5))
         return self.l7(self.h6)
-                
+
     def differentiable_backward(self, x):
         g = bw_linear(self.h6, x, self.l7)
         g = F.reshape(g, (x.shape[0], 64, 3, 3))
@@ -144,7 +145,7 @@ class MnistPolicyNet(chainer.Chain):
             # image encoding part
             in_channel = 2 if self.conditional else 1
             self.e1_c1 = L.Convolution2D(in_channel, 32, ksize=5)
-            
+
             # action observation encoding part
             self.e1_l1_a1 = L.Linear(1, 16)
             self.e1_l1_a2 = L.Linear(1, 16)
@@ -154,7 +155,7 @@ class MnistPolicyNet(chainer.Chain):
             self.e2_c2 = L.Convolution2D(32, 32, stride=2, ksize=4)
             self.e2_c3 = L.Convolution2D(32, 32, stride=2, ksize=4)
             self.e2_l1 = L.Linear(800, 256)
-            
+
             # lstm
             self.lstm = L.LSTM(256, 256)
 
@@ -163,7 +164,7 @@ class MnistPolicyNet(chainer.Chain):
 
     def __call__(self, obs, conditional_input=None):
         o_c, o_a1, o_a2 = obs
-        
+
         if self.conditional:
             # concat image obs and conditional image input
             o_c = F.concat((o_c, conditional_input), axis=1)
@@ -182,7 +183,7 @@ class MnistPolicyNet(chainer.Chain):
         h = self.f(self.e2_c3(h))
         h = F.expand_dims(F.flatten(h), 0)
         h = self.f(self.e2_l1(h))
-        
+
         # lstm
         h = self.lstm(h)
 
@@ -200,7 +201,7 @@ class MnistValueNet(chainer.Chain):
             # image encoding part
             in_channel = 2 if self.conditional else 1
             self.e1_c1 = L.Convolution2D(in_channel, 32, ksize=5)
-            
+
             # action observation encoding part
             self.e1_l1_a1 = L.Linear(1, 16)
             self.e1_l1_a2 = L.Linear(1, 16)
@@ -210,7 +211,7 @@ class MnistValueNet(chainer.Chain):
             self.e2_c2 = L.Convolution2D(32, 32, stride=2, ksize=4)
             self.e2_c3 = L.Convolution2D(32, 32, stride=2, ksize=4)
             self.e2_l1 = L.Linear(800, 128)
-            
+
             # lstm
             self.lstm = L.LSTM(128, 128)
             self.d1_l1 = L.Linear(128, 1)
@@ -218,7 +219,7 @@ class MnistValueNet(chainer.Chain):
     def __call__(self, obs, conditional_input=None):
         o_c, o_a1, o_a2 = obs
         # image encoding part
-        
+
         if self.conditional:
             # concat image obs and conditional image input
             o_c = F.concat((o_c, conditional_input), axis=1)
@@ -292,7 +293,6 @@ class ToyPolicyNet(chainer.Chain):
             self.d_a2_l1 = L.Linear(30, 10)
             self.d_a2_l2 = L.Linear(10, 2)
 
-
     def __call__(self, obs, conditional_input):
         o_c, o_a1, o_a2 = obs
 
@@ -325,7 +325,7 @@ class ToyPolicyNet(chainer.Chain):
 
         return probs, acts
 
-    
+
 class ToyValueNet(chainer.Chain):
     def __init__(self, imsize, conditional):
         self.f = F.sigmoid
@@ -341,7 +341,6 @@ class ToyValueNet(chainer.Chain):
             self.lstm = L.Linear(10, 10)
             self.e2_l2 = L.Linear(10, 1)
 
-    
     def __call__(self, obs, conditional_input):
         o_c, o_a1, o_a2 = obs
 
@@ -362,12 +361,13 @@ class ToyValueNet(chainer.Chain):
 
 class SpiralMnistModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
     """ Model for mnist drawing """
+
     def __init__(self, imsize, conditional):
         # define policy and value networks
         self.pi = MnistPolicyNet(imsize, conditional)
         self.v = MnistValueNet(imsize, conditional)
         super().__init__(self.pi, self.v)
-    
+
     def pi_and_v(self, state, conditional_input=None):
         """ forwarding single step """
         return self.pi(state, conditional_input), self.v(state, conditional_input)
@@ -375,14 +375,13 @@ class SpiralMnistModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
 
 class SpiralToyModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
     """ A simple model """
+
     def __init__(self, imsize, conditional):
         # define policy and value networks
         self.pi = ToyPolicyNet(imsize, conditional)
         self.v = ToyValueNet(imsize, conditional)
         super().__init__(self.pi, self.v)
-    
+
     def pi_and_v(self, state, conditional_input=None):
         """ forwarding single step """
         return self.pi(state, conditional_input), self.v(state, conditional_input)
-
-    

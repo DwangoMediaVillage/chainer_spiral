@@ -1,8 +1,10 @@
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import os
+
 import cv2
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 import numpy as np
+
 
 def preprocess_image(x):
     """ function to preprocess image from observation """
@@ -10,6 +12,7 @@ def preprocess_image(x):
     x = x.astype(np.float32) / 255.0
     x = np.reshape(x, [1, 1] + list(x.shape))
     return x
+
 
 def preprocess_obs(obs, imsize):
     """ function to preprocess observation from env """
@@ -22,29 +25,24 @@ def preprocess_obs(obs, imsize):
 
     # position
     x /= float(imsize * imsize)
-    x = np.asarray(x, dtype=np.float32) 
+    x = np.asarray(x, dtype=np.float32)
     x = np.reshape(x, (1, 1))
 
     # prob
     q = np.asarray(q, dtype=np.float32)
     q = np.reshape(q, (1, 1))
-    
+
     # return state as a tuple
     return c, x, q
 
+
 def pack_action(act):
     a1, a2 = act  # sampled actions by policy net
-    return {'position': int(a1.data),
-            'pressure': 1.0,
-            'color': (0, 0, 0),
-            'prob': int(a2.data)}
+    return {'position': int(a1.data), 'pressure': 1.0, 'color': (0, 0, 0), 'prob': int(a2.data)}
 
-def compute_auxiliary_reward(past_reward, 
-                            past_act, 
-                            n_episode,
-                            max_episode_steps,
-                            staying_penalty,
-                            empty_drawing_penalty):
+
+def compute_auxiliary_reward(past_reward, past_act, n_episode, max_episode_steps, staying_penalty,
+                             empty_drawing_penalty):
     empty = True
     drawing_steps = 0
 
@@ -53,8 +51,8 @@ def compute_auxiliary_reward(past_reward,
     for t in range(max_episode_steps):
         a1 = past_act[n_episode, t]['position']
         a2 = past_act[n_episode, t]['prob']
-        
-        if empty and a2: 
+
+        if empty and a2:
             empty = False
 
         if t > 0:
@@ -71,8 +69,9 @@ def compute_auxiliary_reward(past_reward,
 
     if empty:
         past_reward[n_episode, max_episode_steps - 1] -= empty_drawing_penalty
-    
+
     return past_reward
+
 
 class ObservationSaver(object):
     def __init__(self, outdir, rollout_n, imsize):
@@ -92,8 +91,7 @@ class ObservationSaver(object):
         for n in range(self.rollout_n):
             ax = plt.subplot(gs[n, 0])
             self.ims_fake.append(
-                ax.imshow(np.zeros((self.imsize, self.imsize)), vmin=0, vmax=1, cmap='gray')
-            )
+                ax.imshow(np.zeros((self.imsize, self.imsize)), vmin=0, vmax=1, cmap='gray'))
             ax.set_xticks([])
             ax.set_yticks([])
             if n == 0:
@@ -101,8 +99,7 @@ class ObservationSaver(object):
 
             ax = plt.subplot(gs[n, 1])
             self.ims_real.append(
-                ax.imshow(np.zeros((self.imsize, self.imsize)), vmin=0, vmax=1, cmap='gray')
-            )
+                ax.imshow(np.zeros((self.imsize, self.imsize)), vmin=0, vmax=1, cmap='gray'))
             ax.set_xticks([])
             ax.set_yticks([])
             if n == 0:
@@ -115,5 +112,3 @@ class ObservationSaver(object):
         self.fig.suptitle(f"Update = {update_n}")
         savename = os.path.join(self.target_dir, f"obs_update_{update_n}.png")
         plt.savefig(savename)
-
-

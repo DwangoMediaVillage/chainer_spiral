@@ -1,7 +1,9 @@
-import chainer
-import numpy as np
 import gzip
+
+import chainer
 import cv2
+import numpy as np
+
 
 class EMnistDataset(chainer.dataset.DatasetMixin):
     """ EMNIST dataset. get_exmaple() returns a batch which has a converted emnist image 
@@ -64,6 +66,3 @@ class EMnistDataset(chainer.dataset.DatasetMixin):
         x = np.expand_dims(x, 0)
         x = 1.0 - x  # background black -> white
         return chainer.Variable(x)
-
-
-

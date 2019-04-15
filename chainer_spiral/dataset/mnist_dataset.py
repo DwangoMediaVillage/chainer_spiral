@@ -1,8 +1,6 @@
 import chainer
 import cv2
 import numpy as np
-import math
-from chainer import functions as F
 
 
 class MnistDataset(chainer.dataset.DatasetMixin):
@@ -38,8 +36,8 @@ class MnistDataset(chainer.dataset.DatasetMixin):
 
     def __filter_single_class(self, xs, label):
         assert label >= 0 and label <= 9
-        indices = [ i for i, x in enumerate(xs) if x[1] == label ]
-        return [ xs[i] for i in indices ]
+        indices = [i for i, x in enumerate(xs) if x[1] == label]
+        return [xs[i] for i in indices]
 
     def __get_mnist(self):
         train, test = chainer.datasets.get_mnist(withlabel=True, ndim=2)
@@ -65,6 +63,3 @@ class MnistDataset(chainer.dataset.DatasetMixin):
         x = np.reshape(x, (1, 1, self.imsize, self.imsize))
         x = 1.0 - x  # background black -> white
         return chainer.Variable(x)
-
-
-

@@ -1,10 +1,12 @@
 """ Helper tool to convert animation from snaphosts of png images, using ImageMagick.
 """
-import glob
 import argparse
+import glob
 import os
-import numpy as np
 import subprocess
+
+import numpy as np
+
 
 def extract_num(filename):
     basename = os.path.basename(filename)
@@ -12,10 +14,12 @@ def extract_num(filename):
     n = int(n)
     return n
 
+
 def sort_by_filename(filenames):
-    n = [ extract_num(filename) for filename in filenames ]
+    n = [extract_num(filename) for filename in filenames]
     idx = np.array(n).argsort()
-    return [ filenames[i] for i in idx ]
+    return [filenames[i] for i in idx]
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -30,7 +34,7 @@ def main():
 
     cmd = ['convert'] + png_files + [args.savename]
     try:
-        res = subprocess.check_output(cmd)
+        subprocess.check_output(cmd)
     except:
         print(f"Error in {cmd}")
 

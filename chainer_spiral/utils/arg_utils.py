@@ -1,5 +1,6 @@
-import logging
 import json
+import logging
+
 
 def load_args(args, arg_log, exceptions=None):
     """ load arguments from arg_log """
@@ -16,6 +17,7 @@ def load_args(args, arg_log, exceptions=None):
 
     return args
 
+
 def print_args(args, logger=None):
     """ print argument list by using logger """
     logger = logger or logging.getLogger(__name__)
@@ -23,4 +25,3 @@ def print_args(args, logger=None):
     for key, value in vars(args).items():
         logger.warning('%s : %s', key, value)
     logger.warning('================================')
-    
