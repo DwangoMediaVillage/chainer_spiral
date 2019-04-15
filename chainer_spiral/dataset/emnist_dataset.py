@@ -19,11 +19,9 @@ class EMnistDataset(chainer.dataset.DatasetMixin):
     def __init__(self, gz_images, gz_labels, single_label=False):
         self.images, self.labels = self.__load_emnist(gz_images, gz_labels)
         if single_label:
-            self.images, self.labels = self.__limit_by_single_label(
-                self.images, self.labels)
+            self.images, self.labels = self.__limit_by_single_label(self.images, self.labels)
         else:
-            self.images, self.labels = self.__limit_by_labels(
-                self.images, self.labels)
+            self.images, self.labels = self.__limit_by_labels(self.images, self.labels)
         self.N = self.images.shape[0]
 
     def __limit_by_single_label(self, images, labels, target_label=11):

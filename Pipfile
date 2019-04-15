@@ -30,5 +30,5 @@ python_version = "3.6"
 [scripts]
 isort = "isort -rc ."
 autoflake = "autoflake . -r --in-place --remove-all-unused-imports --remove-unused-variables"
-yapf = "yapf -ir ."
+yapf = "yapf -ir . --style='{column_limit: 100}'"
 test = "nosetests tests"

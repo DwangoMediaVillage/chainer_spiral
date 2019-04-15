@@ -14,19 +14,14 @@ class MnistDataset(chainer.dataset.DatasetMixin):
         binarization (bool): If True, it gives binarized images
     """
 
-    def __init__(self,
-                 imsize,
-                 single_class=False,
-                 target_label=None,
-                 binarization=False):
+    def __init__(self, imsize, single_class=False, target_label=None, binarization=False):
         self.imsize = imsize
         self.single_class = single_class
         self.target_label = target_label
         self.binarization = binarization
 
         # may be download mnist dataset
-        self.train, self.test, self.train_iter, self.test_iter = self.__get_mnist(
-        )
+        self.train, self.test, self.train_iter, self.test_iter = self.__get_mnist()
 
     def __len__(self):
         return len(self.train)

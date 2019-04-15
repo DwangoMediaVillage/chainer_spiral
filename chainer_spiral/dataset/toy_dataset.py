@@ -21,25 +21,14 @@ class ToyDataset(chainer.dataset.DatasetMixin):
         self.train, self.test = self.__get_data()
 
     def __get_data(self):
-        train = [
-            self.__create_target_data(pattern)
-            for pattern in self.train_patterns
-        ]
-        test = [
-            self.__create_target_data(pattern)
-            for pattern in self.test_patterns
-        ]
+        train = [self.__create_target_data(pattern) for pattern in self.train_patterns]
+        test = [self.__create_target_data(pattern) for pattern in self.test_patterns]
         return train, test
 
     def __create_target_data(self, pattern):
         env = ToyEnv(self.imsize)
         for index in pattern:
-            a = {
-                'position': index,
-                'pressure': 1.0,
-                'color': (0, 0, 0),
-                'prob': 1
-            }
+            a = {'position': index, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 1}
             env.step(a)
         return env.render('rgb_array')
 

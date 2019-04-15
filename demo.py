@@ -8,14 +8,13 @@ import chainer
 import yaml
 
 from chainer_spiral.agents import spiral
-from chainer_spiral.dataset import (EMnistDataset, JikeiDataset, MnistDataset,
-                                    QuickdrawDataset, ToyDataset)
+from chainer_spiral.dataset import (EMnistDataset, JikeiDataset, MnistDataset, QuickdrawDataset,
+                                    ToyDataset)
 from chainer_spiral.environments import MyPaintEnv, ToyEnv
 from chainer_spiral.models import (SpiralMnistDiscriminator, SpiralMnistModel,
                                    SpiralToyDiscriminator, SpiralToyModel)
 from chainer_spiral.utils.arg_utils import print_args
-from chainer_spiral.utils.evaluators import (demo_many, demo_movie,
-                                             demo_output_json, demo_static)
+from chainer_spiral.utils.evaluators import (demo_many, demo_movie, demo_output_json, demo_static)
 
 # This prevents numpy from using multiple threads
 os.environ['OMP_NUM_THREADS'] = '1'  # NOQA
@@ -23,12 +22,8 @@ os.environ['OMP_NUM_THREADS'] = '1'  # NOQA
 
 def demo():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode',
-                        type=str,
-                        choices=['static', 'many', 'movie', 'json'])
-    parser.add_argument('load',
-                        type=str,
-                        help='target directory to load trained params')
+    parser.add_argument('mode', type=str, choices=['static', 'many', 'movie', 'json'])
+    parser.add_argument('load', type=str, help='target directory to load trained params')
     parser.add_argument('savename', type=str)
     args = parser.parse_args()
     print_args(args)
@@ -79,12 +74,10 @@ def demo():
 
         if config['problem'] == 'mnist':
             single_label = config['mnist_target_label'] is not None
-            dataset = MnistDataset(config['imsize'], single_label,
-                                   config['mnist_target_label'],
+            dataset = MnistDataset(config['imsize'], single_label, config['mnist_target_label'],
                                    config['mnist_binarization'])
         elif config['problem'] == 'emnist':
-            dataset = EMnistDataset(config['emnist_gz_images'],
-                                    config['emnist_gz_labels'],
+            dataset = EMnistDataset(config['emnist_gz_images'], config['emnist_gz_labels'],
                                     config['emnist_single_label'])
         elif config['problem'] == 'jikei':
             dataset = JikeiDataset(config['jikei_npz'])
@@ -107,25 +100,24 @@ def demo():
         dis_opt.add_hook(NonbiasWeightDecay(config['weight_decay']))
 
     # init an spiral agent
-    agent = spiral.SPIRAL(
-        generator=gen,
-        discriminator=dis,
-        gen_optimizer=gen_opt,
-        dis_optimizer=dis_opt,
-        dataset=dataset,
-        conditional=config['conditional'],
-        reward_mode=config['reward_mode'],
-        imsize=config['imsize'],
-        max_episode_steps=config['max_episode_steps'],
-        rollout_n=config['rollout_n'],
-        gamma=config['gamma'],
-        beta=config['beta'],
-        gp_lambda=config['gp_lambda'],
-        lambda_R=config['lambda_R'],
-        staying_penalty=config['staying_penalty'],
-        empty_drawing_penalty=config['empty_drawing_penalty'],
-        n_save_final_obs_interval=config['n_save_final_obs_interval'],
-        outdir=os.path.join(args.load, os.pardir))
+    agent = spiral.SPIRAL(generator=gen,
+                          discriminator=dis,
+                          gen_optimizer=gen_opt,
+                          dis_optimizer=dis_opt,
+                          dataset=dataset,
+                          conditional=config['conditional'],
+                          reward_mode=config['reward_mode'],
+                          imsize=config['imsize'],
+                          max_episode_steps=config['max_episode_steps'],
+                          rollout_n=config['rollout_n'],
+                          gamma=config['gamma'],
+                          beta=config['beta'],
+                          gp_lambda=config['gp_lambda'],
+                          lambda_R=config['lambda_R'],
+                          staying_penalty=config['staying_penalty'],
+                          empty_drawing_penalty=config['empty_drawing_penalty'],
+                          n_save_final_obs_interval=config['n_save_final_obs_interval'],
+                          outdir=os.path.join(args.load, os.pardir))
 
     # load from a snapshot
     agent.load(args.load)

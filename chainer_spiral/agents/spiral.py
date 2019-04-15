@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import copy
 import os
@@ -14,10 +13,8 @@ from chainerrl.experiments.hooks import StepHook
 from chainerrl.misc import async_, copy_param
 from future import standard_library
 
-from chainer_spiral.agents.agent_utils import (ObservationSaver,
-                                               compute_auxiliary_reward,
-                                               pack_action, preprocess_image,
-                                               preprocess_obs)
+from chainer_spiral.agents.agent_utils import (ObservationSaver, compute_auxiliary_reward,
+                                               pack_action, preprocess_image, preprocess_obs)
 
 standard_library.install_aliases()  # NOQA
 
@@ -80,9 +77,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     """
 
     process_idx = None
-    saved_attributes = [
-        'generator', 'discriminator', 'gen_optimizer', 'dis_optimizer'
-    ]
+    saved_attributes = ['generator', 'discriminator', 'gen_optimizer', 'dis_optimizer']
 
     def __init__(self,
                  generator,
@@ -119,8 +114,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         async_.assert_params_not_shared(self.shared_generator, self.generator)
 
         self.discriminator = copy.deepcopy(self.shared_discriminator)
-        async_.assert_params_not_shared(self.shared_discriminator,
-                                        self.discriminator)
+        async_.assert_params_not_shared(self.shared_discriminator, self.discriminator)
 
         self.gen_optimizer = gen_optimizer
         self.dis_optimizer = dis_optimizer
@@ -147,8 +141,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.pi_loss_coef = pi_loss_coef
         self.v_loss_coef = v_loss_coef
 
-        self.observation_saver = ObservationSaver(self.outdir, self.rollout_n,
-                                                  self.imsize)
+        self.observation_saver = ObservationSaver(self.outdir, self.rollout_n, self.imsize)
 
         # initialize stat
         self.stat_average_value = 0.0
@@ -160,15 +153,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.__reset_stats()
 
     def sync_parameters(self):
-        copy_param.copy_param(target_link=self.generator,
-                              source_link=self.shared_generator)
-        copy_param.copy_param(target_link=self.discriminator,
-                              source_link=self.shared_discriminator)
+        copy_param.copy_param(target_link=self.generator, source_link=self.shared_generator)
+        copy_param.copy_param(target_link=self.discriminator, source_link=self.shared_discriminator)
 
     @property
     def shared_attributes(self):
-        return ('shared_generator', 'shared_discriminator', 'gen_optimizer',
-                'dis_optimizer')
+        return ('shared_generator', 'shared_discriminator', 'gen_optimizer', 'dis_optimizer')
 
     def __reset_flags(self):
         self.t = 0  # time step counter
@@ -232,8 +222,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # get probabilities, sampled actions, and value from the generator
         if self.conditional:
-            pout, vout = self.generator.pi_and_v(
-                state, self.past_conditional_input[n])
+            pout, vout = self.generator.pi_and_v(state, self.past_conditional_input[n])
         else:
             pout, vout = self.generator.pi_and_v(state)
 
@@ -241,18 +230,15 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # put inferences to the buffer
         self.past_action_entropy[n, t] = sum([p.entropy for p in prob])
-        self.past_action_log_prob[n, t] = sum(
-            [p.log_prob(a) for p, a in zip(prob, act)])
+        self.past_action_log_prob[n, t] = sum([p.log_prob(a) for p, a in zip(prob, act)])
         self.past_values[n, t] = vout
 
         # update stats (moving average of value and entropy)
-        self.stat_average_value += (
-            (1 - self.average_value_decay) *
-            (float(vout.data[0, 0]) - self.stat_average_value))
+        self.stat_average_value += ((1 - self.average_value_decay) *
+                                    (float(vout.data[0, 0]) - self.stat_average_value))
         self.stat_average_entropy += (
             (1 - self.average_entropy_decay) *
-            (float(self.past_action_entropy[n, t].data) -
-             self.stat_average_entropy))
+            (float(self.past_action_entropy[n, t].data) - self.stat_average_entropy))
 
         # update counter
         self.t += 1
@@ -262,9 +248,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.past_actions[n, t] = act
 
         if self.process_idx == 0:
-            logger.debug(
-                'act_and_train at step %s, local step %s, local episode %s',
-                self.t, t, n)
+            logger.debug('act_and_train at step %s, local step %s, local episode %s', self.t, t, n)
             logger.debug('taking action %s', act)
 
         return act
@@ -281,8 +265,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             self.real_data[n] = self.dataset.get_example()
 
         # compute L2 loss between target data and drawn picture by the agent
-        l2_loss = F.mean_squared_error(
-            self.fake_data[n], self.real_data[n]).data / float(self.rollout_n)
+        l2_loss = F.mean_squared_error(self.fake_data[n], self.real_data[n]).data / float(
+            self.rollout_n)
         if n == 0:
             self.stat_l2_loss = l2_loss
         else:
@@ -292,16 +276,13 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         if self.reward_mode == 'l2':
             R = -l2_loss
         else:
-            conditional_input = self.past_conditional_input[
-                n] if self.conditional else None
+            conditional_input = self.past_conditional_input[n] if self.conditional else None
             if self.reward_mode == 'dcgan':
-                y_fake = self.discriminator(self.fake_data[n],
-                                            conditional_input)
+                y_fake = self.discriminator(self.fake_data[n], conditional_input)
                 R = np_softplus(y_fake.data).data[0, 0]
                 self.y_fake[n] = y_fake
             elif self.reward_mode == 'wgangp':
-                y_fake = self.discriminator(self.fake_data[n],
-                                            conditional_input)
+                y_fake = self.discriminator(self.fake_data[n], conditional_input)
                 R = y_fake.data[0, 0]
                 self.y_fake[n] = y_fake
             else:
@@ -314,10 +295,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         self.past_R[n] = R
 
         # compute auxiliary reward at the end of drawing process
-        self.past_reward = compute_auxiliary_reward(self.past_reward,
-                                                    self.past_actions, n,
-                                                    self.max_episode_steps,
-                                                    self.staying_penalty,
+        self.past_reward = compute_auxiliary_reward(self.past_reward, self.past_actions, n,
+                                                    self.max_episode_steps, self.staying_penalty,
                                                     self.empty_drawing_penalty)
 
         # reset LSTM states
@@ -332,8 +311,7 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # saving the final observation images as png
         if self.process_idx == 0 and self.update_n % self.n_save_final_obs_interval == 0:
-            self.observation_saver.save(self.fake_data, self.real_data,
-                                        self.update_n)
+            self.observation_saver.save(self.fake_data, self.real_data, self.update_n)
 
         self.__reset_buffers()
         self.__reset_flags()
@@ -383,14 +361,12 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
 
         # copy the gradients of the local generator to the globally shared model
         self.shared_generator.zerograds()
-        copy_param.copy_grad(target_link=self.shared_generator,
-                             source_link=self.generator)
+        copy_param.copy_grad(target_link=self.shared_generator, source_link=self.generator)
 
         # update the gobally shared model
         if self.process_idx == 0:
             norm = sum(
-                np.sum(np.square(param.grad))
-                for param in self.gen_optimizer.target.params())
+                np.sum(np.square(param.grad)) for param in self.gen_optimizer.target.params())
             logger.debug('grad_norm of generator: %s', norm)
         self.gen_optimizer.update()
 
@@ -434,12 +410,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         """ Compute the loss of discriminator """
         if self.reward_mode == 'wgangp':
             # WGAN-GP with 1 step wasserstein distance sampling
-            loss_dis = -F.sum(y_real) / self.rollout_n + F.sum(
-                y_fake) / self.rollout_n
+            loss_dis = -F.sum(y_real) / self.rollout_n + F.sum(y_fake) / self.rollout_n
 
             # add gradient panalty to the loss
-            eps = np.random.uniform(0, 1,
-                                    size=self.rollout_n).astype(np.float32)
+            eps = np.random.uniform(0, 1, size=self.rollout_n).astype(np.float32)
             eps = np.reshape(eps, (self.rollout_n, 1, 1, 1))
             x_mid = eps * x_real + (1.0 - eps) * x_fake
 
@@ -449,11 +423,9 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
             else:
                 y_mid = self.discriminator(x_mid_v)
 
-            dydx = self.discriminator.differentiable_backward(
-                np.ones_like(y_mid.data))
+            dydx = self.discriminator.differentiable_backward(np.ones_like(y_mid.data))
             dydx = F.sqrt(F.sum(dydx**2, axis=(1, 2, 3)))
-            loss_gp = self.gp_lambda * F.mean_squared_error(
-                dydx, np.ones_like(dydx.data))
+            loss_gp = self.gp_lambda * F.mean_squared_error(dydx, np.ones_like(dydx.data))
 
             # update statistics
             self.stat_loss_dis = float(loss_dis.data)
@@ -489,13 +461,10 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
         # returns statistics after updating and reset stat_l2_loss
 
         ret = [('average_value', self.stat_average_value),
-               ('average_entropy', self.stat_average_entropy),
-               ('l2_loss', self.stat_l2_loss), ('pi_loss', self.stat_pi_loss),
-               ('v_loss', self.stat_v_loss), ('R', self.stat_R),
-               ('reward_min', self.stat_reward_min),
-               ('reward_mean', self.stat_reward_mean),
-               ('reward_max', self.stat_reward_max),
-               ('reward_std', self.stat_reward_std),
+               ('average_entropy', self.stat_average_entropy), ('l2_loss', self.stat_l2_loss),
+               ('pi_loss', self.stat_pi_loss), ('v_loss', self.stat_v_loss), ('R', self.stat_R),
+               ('reward_min', self.stat_reward_min), ('reward_mean', self.stat_reward_mean),
+               ('reward_max', self.stat_reward_max), ('reward_std', self.stat_reward_std),
                ('update_n', self.update_n)]
 
         if self.reward_mode == 'wgangp':
@@ -535,10 +504,8 @@ class SPIRAL(agent.AttributeSavingMixin, agent.Agent):
     def load(self, dirname):
         logger.debug('Load parameters from %s', dirname)
         super().load(dirname)
-        copy_param.copy_param(target_link=self.shared_generator,
-                              source_link=self.generator)
-        copy_param.copy_param(target_link=self.shared_discriminator,
-                              source_link=self.discriminator)
+        copy_param.copy_param(target_link=self.shared_generator, source_link=self.generator)
+        copy_param.copy_param(target_link=self.shared_discriminator, source_link=self.discriminator)
 
     def snap(self, step, outdir):
         dirname = os.path.join(outdir, '{}'.format(step))

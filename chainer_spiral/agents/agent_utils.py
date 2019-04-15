@@ -38,16 +38,10 @@ def preprocess_obs(obs, imsize):
 
 def pack_action(act):
     a1, a2 = act  # sampled actions by policy net
-    return {
-        'position': int(a1.data),
-        'pressure': 1.0,
-        'color': (0, 0, 0),
-        'prob': int(a2.data)
-    }
+    return {'position': int(a1.data), 'pressure': 1.0, 'color': (0, 0, 0), 'prob': int(a2.data)}
 
 
-def compute_auxiliary_reward(past_reward, past_act, n_episode,
-                             max_episode_steps, staying_penalty,
+def compute_auxiliary_reward(past_reward, past_act, n_episode, max_episode_steps, staying_penalty,
                              empty_drawing_penalty):
     empty = True
     drawing_steps = 0
@@ -97,10 +91,7 @@ class ObservationSaver(object):
         for n in range(self.rollout_n):
             ax = plt.subplot(gs[n, 0])
             self.ims_fake.append(
-                ax.imshow(np.zeros((self.imsize, self.imsize)),
-                          vmin=0,
-                          vmax=1,
-                          cmap='gray'))
+                ax.imshow(np.zeros((self.imsize, self.imsize)), vmin=0, vmax=1, cmap='gray'))
             ax.set_xticks([])
             ax.set_yticks([])
             if n == 0:
@@ -108,10 +99,7 @@ class ObservationSaver(object):
 
             ax = plt.subplot(gs[n, 1])
             self.ims_real.append(
-                ax.imshow(np.zeros((self.imsize, self.imsize)),
-                          vmin=0,
-                          vmax=1,
-                          cmap='gray'))
+                ax.imshow(np.zeros((self.imsize, self.imsize)), vmin=0, vmax=1, cmap='gray'))
             ax.set_xticks([])
             ax.set_yticks([])
             if n == 0:

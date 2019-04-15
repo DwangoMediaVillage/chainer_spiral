@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import os
 from builtins import *  # NOQA
@@ -75,8 +74,7 @@ class AutoregressiveDecoder(chainer.Chain):
         a1 = p1.sample()
 
         # decode prob
-        h_a1 = self.f(self.l1_l1(
-            np.expand_dims(a1.data, 0).astype(np.float32)))
+        h_a1 = self.f(self.l1_l1(np.expand_dims(a1.data, 0).astype(np.float32)))
         h_a1 = F.concat((z1, h_a1), axis=1)
 
         z2 = self.f(self.l1_l2(h_a1))
@@ -372,8 +370,7 @@ class SpiralMnistModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
 
     def pi_and_v(self, state, conditional_input=None):
         """ forwarding single step """
-        return self.pi(state,
-                       conditional_input), self.v(state, conditional_input)
+        return self.pi(state, conditional_input), self.v(state, conditional_input)
 
 
 class SpiralToyModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
@@ -387,5 +384,4 @@ class SpiralToyModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
 
     def pi_and_v(self, state, conditional_input=None):
         """ forwarding single step """
-        return self.pi(state,
-                       conditional_input), self.v(state, conditional_input)
+        return self.pi(state, conditional_input), self.v(state, conditional_input)

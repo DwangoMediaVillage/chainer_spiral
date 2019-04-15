@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import json
 import logging
@@ -106,12 +105,7 @@ def run_single_episode(env, agent, max_episode_steps, conditional_input=None):
     return obs, act
 
 
-def run_episode(env,
-                agent,
-                N,
-                max_episode_steps,
-                conditional=False,
-                dataset=None):
+def run_episode(env, agent, N, max_episode_steps, conditional=False, dataset=None):
     """ rollout N times with agent and env until max_episode steps for each episode. """
     obs, act = [], []
     if conditional: cond_inputs = []
@@ -135,14 +129,7 @@ def run_episode(env,
         return obs, act
 
 
-def demo_static(env,
-                agent,
-                config,
-                savename,
-                suptitle,
-                dataset,
-                n_row=5,
-                plot_act=True):
+def demo_static(env, agent, config, savename, suptitle, dataset, n_row=5, plot_act=True):
     """ render drawn picture and lines colored by ordering """
     fig = plt.figure(figsize=(7, 7))
     if config['conditional']:
@@ -171,8 +158,7 @@ def demo_static(env,
             # plot act
             if plot_act:
                 ax_act = plt.subplot(gs[n, 2])
-                plot_action(ax_act, act[n], config['max_episode_steps'],
-                            obs[n][0], env.convert_x)
+                plot_action(ax_act, act[n], config['max_episode_steps'], obs[n][0], env.convert_x)
                 set_axis_prop(ax_act)
                 if n == 0: ax_act.set_title('Line colored by order')
 
@@ -190,8 +176,7 @@ def demo_static(env,
             # plot act
             if plot_act:
                 ax_act = plt.subplot(gs[n, 1])
-                plot_action(ax_act, act[n], config['max_episode_steps'],
-                            obs[n][0], env.convert_x)
+                plot_action(ax_act, act[n], config['max_episode_steps'], obs[n][0], env.convert_x)
                 set_axis_prop(ax_act)
                 if n == 0: ax_act.set_title('Line colored by order')
 
@@ -200,14 +185,7 @@ def demo_static(env,
     plt.savefig(savename)
 
 
-def demo_movie(env,
-               agent,
-               config,
-               savename,
-               suptitle,
-               dataset,
-               n_row=5,
-               plot_act=True):
+def demo_movie(env, agent, config, savename, suptitle, dataset, n_row=5, plot_act=True):
     """ render movie of drawn picture, final observation, and lines colored by ordering """
     fig = plt.figure(figsize=(7, 7))
     ims = []
@@ -243,8 +221,7 @@ def demo_movie(env,
             # plot act
             if plot_act:
                 ax_act = plt.subplot(gs[n, 3])
-                plot_action(ax_act, act[n], config['max_episode_steps'],
-                            obs[n][0], env.convert_x)
+                plot_action(ax_act, act[n], config['max_episode_steps'], obs[n][0], env.convert_x)
                 set_axis_prop(ax_act)
                 if n == 0: ax_act.set_title('Line colored by order')
 
@@ -268,8 +245,7 @@ def demo_movie(env,
             # plot act
             if plot_act:
                 ax_act = plt.subplot(gs[n, 2])
-                plot_action(ax_act, act[n], config['max_episode_steps'],
-                            obs[n][0], env.convert_x)
+                plot_action(ax_act, act[n], config['max_episode_steps'], obs[n][0], env.convert_x)
                 set_axis_prop(ax_act)
                 if n == 0: ax_act.set_title('Line colored by order')
 
@@ -288,14 +264,7 @@ def demo_movie(env,
     ani.save(savename)
 
 
-def demo_many(env,
-              agent,
-              config,
-              savename,
-              suptitle,
-              dataset,
-              n_row=10,
-              n_col=5):
+def demo_many(env, agent, config, savename, suptitle, dataset, n_row=10, n_col=5):
     """ render many final observations """
     fig = plt.figure(figsize=(7, 7))
     if config['conditional']:
@@ -327,8 +296,7 @@ def demo_many(env,
     else:
         # conditional generation
         gs = gridspec.GridSpec(n_row, n_col * 2)
-        obs, act = run_episode(env, agent, n_row * n_col * 2,
-                               config['max_episode_steps'])
+        obs, act = run_episode(env, agent, n_row * n_col * 2, config['max_episode_steps'])
         n = 0
         for i in range(n_row):
             for j in range(n_col * 2):

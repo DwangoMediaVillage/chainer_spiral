@@ -13,17 +13,14 @@ import pandas
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-EXCEPT_TAGS = ('steps', 'episodes', 'elapsed', 'mean', 'median', 'stdev',
-               'max', 'min')
+EXCEPT_TAGS = ('steps', 'episodes', 'elapsed', 'mean', 'median', 'stdev', 'max', 'min')
 
 
 def load_scores(score_dir):
     logging.info(f"load scores.txt from {score_dir}")
     assert (score_dir / 'scores.txt').exists(), 'scores.txt does not exist!'
 
-    df = pandas.read_csv(score_dir / 'scores.txt',
-                         dtype=np.float32,
-                         na_values='None',
+    df = pandas.read_csv(score_dir / 'scores.txt', dtype=np.float32, na_values='None',
                          sep='\t').sort_values('steps')
 
     df['elapsed'] = pandas.to_timedelta(df['elapsed'], unit='s')
