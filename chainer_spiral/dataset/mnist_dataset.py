@@ -1,8 +1,6 @@
 import chainer
 import cv2
 import numpy as np
-import math
-from chainer import functions as F
 
 
 class MnistDataset(chainer.dataset.DatasetMixin):
@@ -16,14 +14,19 @@ class MnistDataset(chainer.dataset.DatasetMixin):
         binarization (bool): If True, it gives binarized images
     """
 
-    def __init__(self, imsize, single_class=False, target_label=None, binarization=False):
+    def __init__(self,
+                 imsize,
+                 single_class=False,
+                 target_label=None,
+                 binarization=False):
         self.imsize = imsize
         self.single_class = single_class
         self.target_label = target_label
         self.binarization = binarization
 
         # may be download mnist dataset
-        self.train, self.test, self.train_iter, self.test_iter = self.__get_mnist()
+        self.train, self.test, self.train_iter, self.test_iter = self.__get_mnist(
+        )
 
     def __len__(self):
         return len(self.train)
@@ -38,8 +41,8 @@ class MnistDataset(chainer.dataset.DatasetMixin):
 
     def __filter_single_class(self, xs, label):
         assert label >= 0 and label <= 9
-        indices = [ i for i, x in enumerate(xs) if x[1] == label ]
-        return [ xs[i] for i in indices ]
+        indices = [i for i, x in enumerate(xs) if x[1] == label]
+        return [xs[i] for i in indices]
 
     def __get_mnist(self):
         train, test = chainer.datasets.get_mnist(withlabel=True, ndim=2)
@@ -65,6 +68,3 @@ class MnistDataset(chainer.dataset.DatasetMixin):
         x = np.reshape(x, (1, 1, self.imsize, self.imsize))
         x = 1.0 - x  # background black -> white
         return chainer.Variable(x)
-
-
-

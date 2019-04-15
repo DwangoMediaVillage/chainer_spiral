@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 
+
 class ToyEnv(gym.Env):
     action_space = None
     observation_space = None
@@ -14,24 +15,36 @@ class ToyEnv(gym.Env):
     def __init__(self, imsize):
         """ init env """
         super().__init__()
-        
+
         self.imsize = imsize
 
         # action_space
         self.action_space = gym.spaces.Dict({
-            'position': gym.spaces.Discrete(self.imsize ** 2),
-            'pressure': gym.spaces.Box(low=0, high=1.0, shape=(), dtype=float),
-            'color': gym.spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
-            'prob': gym.spaces.Discrete(2)
-        })        
+            'position':
+            gym.spaces.Discrete(self.imsize**2),
+            'pressure':
+            gym.spaces.Box(low=0, high=1.0, shape=(), dtype=float),
+            'color':
+            gym.spaces.Box(low=0, high=1.0, shape=(3, ), dtype=float),
+            'prob':
+            gym.spaces.Discrete(2)
+        })
 
         # observation space
         self.observation_space = gym.spaces.Dict({
-            'image': gym.spaces.Box(low=0, high=255, shape=(self.imsize, self.imsize, 3), dtype=np.uint8),
-            'position': gym.spaces.Discrete(self.imsize ** 2),
-            'pressure': gym.spaces.Box(low=0, high=1.0, shape=(), dtype=float),
-            'color': gym.spaces.Box(low=0, high=1.0, shape=(3,), dtype=float),
-            'prob': gym.spaces.Discrete(1)
+            'image':
+            gym.spaces.Box(low=0,
+                           high=255,
+                           shape=(self.imsize, self.imsize, 3),
+                           dtype=np.uint8),
+            'position':
+            gym.spaces.Discrete(self.imsize**2),
+            'pressure':
+            gym.spaces.Box(low=0, high=1.0, shape=(), dtype=float),
+            'color':
+            gym.spaces.Box(low=0, high=1.0, shape=(3, ), dtype=float),
+            'prob':
+            gym.spaces.Discrete(1)
         })
 
         self.reset()
@@ -39,11 +52,13 @@ class ToyEnv(gym.Env):
     def reset(self):
         self.image = np.ones((self.imsize, self.imsize, 3)) * 255.0
         self.image = self.image.astype(np.uint8)
-        o = {'image': self.image,
+        o = {
+            'image': self.image,
             'position': 0,
             'pressure': 0,
             'color': (0, 0, 0),
-            'prob': 0}
+            'prob': 0
+        }
         # return observation, reward, done, and info
         return o
 
@@ -57,19 +72,21 @@ class ToyEnv(gym.Env):
 
         if q:
             self.image[p1, p2, :] = 0
-        
-        o = {'image': self.image,
+
+        o = {
+            'image': self.image,
             'position': x,
             'pressure': p,
             'color': c,
-            'prob': q}
-        
+            'prob': q
+        }
+
         # return observation, reward, done, and info
         return o, 0, False, None
 
     def convert_x(self, x):
         """ convert position id -> a point (p1, p2) """
-        assert x < self.imsize ** 2
+        assert x < self.imsize**2
         p1 = x % self.imsize
         p2 = x // self.imsize
         return int(p1), int(p2)
@@ -83,7 +100,7 @@ class ToyEnv(gym.Env):
 
     def close(self):
         pass
-    
+
     def seed(self, seed=None):
         pass
 
@@ -95,7 +112,7 @@ if __name__ == '__main__':
         a = env.action_space.sample()
         print(a)
         o, _, _, _ = env.step(a)
-    
+
     import matplotlib.pyplot as plt
     plt.imshow(o['image'])
     plt.show()

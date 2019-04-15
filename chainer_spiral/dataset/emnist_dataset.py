@@ -1,7 +1,9 @@
-import chainer
-import numpy as np
 import gzip
+
+import chainer
 import cv2
+import numpy as np
+
 
 class EMnistDataset(chainer.dataset.DatasetMixin):
     """ EMNIST dataset. get_exmaple() returns a batch which has a converted emnist image 
@@ -17,9 +19,11 @@ class EMnistDataset(chainer.dataset.DatasetMixin):
     def __init__(self, gz_images, gz_labels, single_label=False):
         self.images, self.labels = self.__load_emnist(gz_images, gz_labels)
         if single_label:
-            self.images, self.labels = self.__limit_by_single_label(self.images, self.labels)
+            self.images, self.labels = self.__limit_by_single_label(
+                self.images, self.labels)
         else:
-            self.images, self.labels = self.__limit_by_labels(self.images, self.labels)
+            self.images, self.labels = self.__limit_by_labels(
+                self.images, self.labels)
         self.N = self.images.shape[0]
 
     def __limit_by_single_label(self, images, labels, target_label=11):
@@ -64,6 +68,3 @@ class EMnistDataset(chainer.dataset.DatasetMixin):
         x = np.expand_dims(x, 0)
         x = 1.0 - x  # background black -> white
         return chainer.Variable(x)
-
-
-

@@ -1,21 +1,25 @@
 """Drawing a picture by a random agent
 """
-from chainer_spiral.environments import MyPaintEnv
-import numpy as np
-from gym import wrappers
 import argparse
+
+from gym import wrappers
+
+from chainer_spiral.environments import MyPaintEnv
+
 
 class RandomAgent(object):
     """ simplest agent """
+
     def __init__(self, action_space):
         self.action_space = action_space
-    
+
     def act(self, observation, reward, done):
         a = self.action_space.sample()
         a['color'] = (0, 0, 0)
         print(f"taking action {a}")
         return a
-    
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('brush_info_file')
@@ -24,15 +28,15 @@ if __name__ == '__main__':
     parser.add_argument('--max_episode_steps', type=int, default=10)
     args = parser.parse_args()
 
-    env = MyPaintEnv(imsize=args.image_resolution, 
-                        pos_resolution=args.pos_resolution, 
-                        max_episode_steps=args.max_episode_steps,
-                        brush_info_file=args.brush_info_file)
-    
+    env = MyPaintEnv(imsize=args.image_resolution,
+                     pos_resolution=args.pos_resolution,
+                     max_episode_steps=args.max_episode_steps,
+                     brush_info_file=args.brush_info_file)
+
     # Gym's monitor does not support small image inputs
     if args.image_resolution >= 30:
         env = wrappers.Monitor(env, directory='./tmp', force=True)
-    
+
     agent = RandomAgent(env.action_space)
 
     reward = 0
@@ -52,4 +56,3 @@ if __name__ == '__main__':
         import matplotlib.pyplot as plt
         plt.imshow(ob['image'])
         plt.savefig('./tmp/random.png')
-
