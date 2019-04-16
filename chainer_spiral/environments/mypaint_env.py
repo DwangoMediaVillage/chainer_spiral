@@ -9,6 +9,7 @@ from lib import brush, mypaintlib, pixbufsurface, tiledsurface
 
 
 class MyPaintEnv(gym.Env):
+    """ Open AI Gym of MyPaint """
     action_space = None
     observation_space = None
     reward_range = None
@@ -26,7 +27,6 @@ class MyPaintEnv(gym.Env):
                  pos_resolution=32,
                  brush_info_file=None,
                  start_x=0):
-        """ initialize environment """
         super().__init__()
 
         # TODO: use EnvSpec?
@@ -58,7 +58,10 @@ class MyPaintEnv(gym.Env):
         # observation space
         self.observation_space = spaces.Dict({
             'image':
-            spaces.Box(low=0, high=255, shape=(self.imsize, self.imsize, 3), dtype=np.uint8),
+            spaces.Box(low=0,
+                       high=255,
+                       shape=(self.imsize, self.imsize, 3),
+                       dtype=np.uint8),
             'position':
             spaces.Discrete(self.pos_resolution**2),
             'pressure':
@@ -135,15 +138,24 @@ class MyPaintEnv(gym.Env):
     def convert_x(self, x):
         """ convert position id -> a point (p1, p2) """
         assert x < self.pos_resolution**2
-        p1 = (x % self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
-        p2 = (x // self.pos_resolution) / self.pos_resolution * self.imsize + self.tile_offset
+        p1 = (x % self.pos_resolution
+              ) / self.pos_resolution * self.imsize + self.tile_offset
+        p2 = (x // self.pos_resolution
+              ) / self.pos_resolution * self.imsize + self.tile_offset
         return int(p1), int(p2)
 
-    def __draw(self, x, pressure, xtilt=0, ytilt=0, dtime=0.1, viewzoom=1.0, viewrotation=0.0):
+    def __draw(self,
+               x,
+               pressure,
+               xtilt=0,
+               ytilt=0,
+               dtime=0.1,
+               viewzoom=1.0,
+               viewrotation=0.0):
         p1, p2 = self.convert_x(x)
         self.surface.begin_atomic()
-        self.brush.stroke_to(self.surface.backend, p1, p2, pressure, xtilt, ytilt, dtime, viewzoom,
-                             viewrotation)
+        self.brush.stroke_to(self.surface.backend, p1, p2, pressure, xtilt,
+                             ytilt, dtime, viewzoom, viewrotation)
         self.surface.end_atomic()
 
         # update the current point
@@ -157,11 +169,13 @@ class MyPaintEnv(gym.Env):
         self.surface.clear()
 
         # fill the canvas with the background color
-        with self.surface.cairo_request(0, 0, self.imsize + self.tile_offset * 2,
-                                        self.imsize + self.tile_offset * 2) as cr:
+        with self.surface.cairo_request(
+                0, 0, self.imsize + self.tile_offset * 2,
+                self.imsize + self.tile_offset * 2) as cr:
             r, g, b = self.bg_color
             cr.set_source_rgb(r, g, b)
-            cr.rectangle(self.tile_offset, self.tile_offset, self.imsize + self.tile_offset * 2,
+            cr.rectangle(self.tile_offset, self.tile_offset,
+                         self.imsize + self.tile_offset * 2,
                          self.imsize + self.tile_offset * 2)
             cr.fill()
 
@@ -207,7 +221,8 @@ class MyPaintEnv(gym.Env):
         # cut out the canvas
         if cut:
             img = img[self.tile_offset:self.tile_offset +
-                      self.imsize, self.tile_offset:self.tile_offset + self.imsize, :]
+                      self.imsize, self.tile_offset:self.tile_offset +
+                      self.imsize, :]
 
         return img
 
@@ -227,13 +242,33 @@ if __name__ == '__main__':
     env = MyPaintEnv(logger=logger)
 
     # drawing something
-    env.step({'position': 32 * 3 + 16, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 0})
-    env.step({'position': 32 * 30 + 16, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 1})
+    env.step({
+        'position': 32 * 3 + 16,
+        'pressure': 1.0,
+        'color': (0, 0, 0),
+        'prob': 0
+    })
+    env.step({
+        'position': 32 * 30 + 16,
+        'pressure': 1.0,
+        'color': (0, 0, 0),
+        'prob': 1
+    })
 
     env.reset()
 
-    env.step({'position': 32 * 3 + 16, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 0})
-    env.step({'position': 32 * 30 + 16, 'pressure': 1.0, 'color': (0, 0, 0), 'prob': 1})
+    env.step({
+        'position': 32 * 3 + 16,
+        'pressure': 1.0,
+        'color': (0, 0, 0),
+        'prob': 0
+    })
+    env.step({
+        'position': 32 * 30 + 16,
+        'pressure': 1.0,
+        'color': (0, 0, 0),
+        'prob': 1
+    })
 
     import matplotlib
     matplotlib.use('MacOSX')

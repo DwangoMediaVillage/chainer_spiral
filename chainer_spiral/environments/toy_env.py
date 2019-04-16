@@ -3,6 +3,7 @@ import numpy as np
 
 
 class ToyEnv(gym.Env):
+    """ Simple drawing environment for debug """
     action_space = None
     observation_space = None
     reward_range = None
@@ -33,7 +34,10 @@ class ToyEnv(gym.Env):
         # observation space
         self.observation_space = gym.spaces.Dict({
             'image':
-            gym.spaces.Box(low=0, high=255, shape=(self.imsize, self.imsize, 3), dtype=np.uint8),
+            gym.spaces.Box(low=0,
+                           high=255,
+                           shape=(self.imsize, self.imsize, 3),
+                           dtype=np.uint8),
             'position':
             gym.spaces.Discrete(self.imsize**2),
             'pressure':
@@ -49,7 +53,13 @@ class ToyEnv(gym.Env):
     def reset(self):
         self.image = np.ones((self.imsize, self.imsize, 3)) * 255.0
         self.image = self.image.astype(np.uint8)
-        o = {'image': self.image, 'position': 0, 'pressure': 0, 'color': (0, 0, 0), 'prob': 0}
+        o = {
+            'image': self.image,
+            'position': 0,
+            'pressure': 0,
+            'color': (0, 0, 0),
+            'prob': 0
+        }
         # return observation, reward, done, and info
         return o
 
@@ -64,7 +74,13 @@ class ToyEnv(gym.Env):
         if q:
             self.image[p1, p2, :] = 0
 
-        o = {'image': self.image, 'position': x, 'pressure': p, 'color': c, 'prob': q}
+        o = {
+            'image': self.image,
+            'position': x,
+            'pressure': p,
+            'color': c,
+            'prob': q
+        }
 
         # return observation, reward, done, and info
         return o, 0, False, None
