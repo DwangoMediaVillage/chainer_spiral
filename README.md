@@ -17,6 +17,10 @@ Chainer implementation of [Synthesizing Programs for Images using Reinforced Adv
 PYTHONPATH=<path-to-my-paint>build/lib.macosx-10.13-x86_64-3.6:$PYTHONPATH
 ```
 
+## Run a pre-trained model
+
+`pipenv run python demo.py many trained_models/mnist/64296000 result.png`
+
 ## How to train
 
 `pipenv run python train.py settings/default.yaml <directory-to-put-logs>`
@@ -40,7 +44,6 @@ Many demo:
 Movie:
 
 ![](images/movie.gif)
-
 
 ## How to install MyPaint for this project
 

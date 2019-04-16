@@ -1,3 +1,9 @@
 images/many.png filter=lfs diff=lfs merge=lfs -text
 images/movie.gif filter=lfs diff=lfs merge=lfs -text
 images/static.png filter=lfs diff=lfs merge=lfs -text
+trained_models/mnist filter=lfs diff=lfs merge=lfs -text
+trained_models/demo_many.png filter=lfs diff=lfs merge=lfs -text
+trained_models/mnist/64296000/dis_optimizer.npz filter=lfs diff=lfs merge=lfs -text
+trained_models/mnist/64296000/discriminator.npz filter=lfs diff=lfs merge=lfs -text
+trained_models/mnist/64296000/gen_optimizer.npz filter=lfs diff=lfs merge=lfs -text
+trained_models/mnist/64296000/generator.npz filter=lfs diff=lfs merge=lfs -text
