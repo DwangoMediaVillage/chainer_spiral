@@ -55,6 +55,12 @@ Movie:
 docker run -it -v `pwd`:/root -u`id -u`:`id -g` chainer_spiral bash
 ```
 
+or you can run demo with a pre-trained model by:
+
+```
+docker run -it -v `pwd`:/root -u`id -u`:`id -g` chainer_spiral python3 demo.py many trained_models/mnist/64296000 result.png
+```
+
 ## How to install MyPaint for this project
 
 ### Install dependencies (CentOS)
