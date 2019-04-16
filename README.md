@@ -50,7 +50,10 @@ Movie:
 `cd docker`
 `docker build ./ -t chainer_spiral`
 `cd ../  # go to directory of this repo`
-`docker run -it -v `pwd`:/root chainer_spiral bash`
+
+```
+docker run -it -v `pwd`:/root -u`id -u`:`id -g` chainer_spiral bash
+```
 
 ## How to install MyPaint for this project
 

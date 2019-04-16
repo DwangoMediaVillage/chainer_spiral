@@ -93,3 +93,6 @@ RUN pip3 install cached-property==1.5.1 \
                 scipy==1.2.1 \
                 six==1.12.0 \
                 urllib3==1.24.1
+
+# default place to download mnist dataset
+ENV CHAINER_DATASET_ROOT /root

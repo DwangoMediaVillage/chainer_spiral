@@ -1,6 +1,9 @@
 .env
 results/
-matplotlibrc
+_create_lock
+_dl_cache/
+pfnet
+./*.png
 
 # ignore results direcotrey created by chainerRL
 results/
