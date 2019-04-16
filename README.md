@@ -45,6 +45,13 @@ Movie:
 
 ![](images/movie.gif)
 
+## Setup this project by Docker
+
+`cd docker`
+`docker build ./ -t chainer_spiral`
+`cd ../  # go to directory of this repo`
+`docker run -it -v `pwd`:/root chainer_spiral bash`
+
 ## How to install MyPaint for this project
 
 ### Install dependencies (CentOS)
