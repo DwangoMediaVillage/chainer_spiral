@@ -1,2 +1,2 @@
-from .spiral import (SpiralMnistDiscriminator, SpiralMnistModel, SpiralToyDiscriminator,
+from .spiral import (SpiralDiscriminator, SpiralModel, SpiralToyDiscriminator,
                      SpiralToyModel)

@@ -88,7 +88,7 @@ class AutoregressiveDecoder(chainer.Chain):
         return probs, acts
 
 
-class SpiralMnistDiscriminator(chainer.Chain):
+class SpiralDiscriminator(chainer.Chain):
     def __init__(self, imsize, conditional):
         self.imsize = imsize
         self.conditional = conditional
@@ -135,7 +135,7 @@ class SpiralMnistDiscriminator(chainer.Chain):
         return g
 
 
-class MnistPolicyNet(chainer.Chain):
+class PolicyNet(chainer.Chain):
     def __init__(self, imsize, conditional):
         self.imsize = imsize
         self.f = F.relu  # activation func for encoding part
@@ -191,7 +191,7 @@ class MnistPolicyNet(chainer.Chain):
         return self.decoder(h)
 
 
-class MnistValueNet(chainer.Chain):
+class ValueNet(chainer.Chain):
     def __init__(self, imsize, conditional):
         self.imsize = imsize
         self.f = F.relu  # activation func for encoding part
@@ -359,13 +359,13 @@ class ToyValueNet(chainer.Chain):
         return h
 
 
-class SpiralMnistModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
+class SpiralModel(chainer.ChainList, SPIRALModel, RecurrentChainMixin):
     """ Model for mnist drawing """
 
     def __init__(self, imsize, conditional):
         # define policy and value networks
-        self.pi = MnistPolicyNet(imsize, conditional)
-        self.v = MnistValueNet(imsize, conditional)
+        self.pi = PolicyNet(imsize, conditional)
+        self.v = ValueNet(imsize, conditional)
         super().__init__(self.pi, self.v)
 
     def pi_and_v(self, state, conditional_input=None):

@@ -13,7 +13,7 @@ from chainer_spiral.agents import SPIRAL, SpiralStepHook
 from chainer_spiral.dataset import (EMnistDataset, JikeiDataset, MnistDataset, QuickdrawDataset,
                                     ToyDataset)
 from chainer_spiral.environments import MyPaintEnv, ToyEnv
-from chainer_spiral.models import (SpiralMnistDiscriminator, SpiralMnistModel,
+from chainer_spiral.models import (SpiralDiscriminator, SpiralModel,
                                    SpiralToyDiscriminator, SpiralToyModel)
 from chainer_spiral.utils.arg_utils import print_args
 
@@ -79,8 +79,8 @@ def main():
             return env
 
         # generator
-        gen = SpiralMnistModel(config['imsize'], config['conditional'])
-        dis = SpiralMnistDiscriminator(config['imsize'], config['conditional'])
+        gen = SpiralModel(config['imsize'], config['conditional'])
+        dis = SpiralDiscriminator(config['imsize'], config['conditional'])
 
         if config['problem'] == 'mnist':
             single_label = config['mnist_target_label'] is not None
