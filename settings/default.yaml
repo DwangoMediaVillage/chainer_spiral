@@ -22,10 +22,10 @@ processes: 12
 conditional: false
 
 # mode to compute reward. l2, dcgan, or wgangp
-reward_mode: 'wgangp'
+reward_mode: "wgangp"
 
 # brush definition file for mypaint env
-brush_info_file: 'settings/my_simple_brush.myb'
+brush_info_file: "settings/my_simple_brush.myb"
 
 # -- training parameters
 # learning rate
@@ -77,8 +77,3 @@ lambda_R: 1.0
 # -- dataset settings
 mnist_target_label: null
 mnist_binarization: false
-jikei_npz: 'tmp/jikei_dataset_limited.npz'
-emnist_gz_images: 'tmp/emnist_gzip/emnist-letters-train-images-idx3-ubyte.gz'
-emnist_gz_labels: 'tmp/emnist_gzip/emnist-letters-train-labels-idx1-ubyte.gz'
-emnist_single_label: false
-quickdraw_npz: 'tmp/quickdraw_apple.npz'
