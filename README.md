@@ -15,7 +15,7 @@ A modified implementation of [Synthesizing Programs for Images using Reinforced 
 ```bash
 cd docker
 docker build . -t chainer_spiral
-docker run -t --name run_chainer_spiral_demo chainer_spiral pipenv run python demo.py movie trained_models/mnist/64296000 result.mp4 --without_dataset
+docker run -t --name run_chainer_spiral_demo chainer_spiral pipenv run python demo.py movie trained_models/quickdraw/68976000 result.mp4 --without_dataset
 docker cp run_chainer_spiral_demo:/chainer_spiral/ChainerSPIRAL/result.mp4 .
 ```
 
