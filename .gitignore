@@ -1,8 +1,10 @@
+# setting of pipenv
 .env
+
+# trianing log
 results/
-_create_lock
-_dl_cache/
-pfnet
+
+# output by demo
 ./*.png
 
 # ignore results direcotrey created by chainerRL

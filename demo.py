@@ -30,6 +30,7 @@ def demo():
                         type=str,
                         help='target directory to load trained params')
     parser.add_argument('savename', type=str)
+    parser.add_argument('--without_dataset', action='store_true')
     args = parser.parse_args()
     print_args(args)
 
@@ -77,6 +78,10 @@ def demo():
         gen = SpiralModel(config['imsize'], config['conditional'])
         dis = SpiralDiscriminator(config['imsize'], config['conditional'])
 
+
+        if args.without_dataset:
+            assert not config['conditional'], "conditional generation requires dataset"
+            dataset = None  # dammny
         if config['problem'] == 'mnist':
             single_label = config['mnist_target_label'] is not None
             dataset = MnistDataset(config['imsize'], single_label,
