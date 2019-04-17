@@ -17,6 +17,10 @@ Chainer implementation of [Synthesizing Programs for Images using Reinforced Adv
 PYTHONPATH=<path-to-my-paint>build/lib.macosx-10.13-x86_64-3.6:$PYTHONPATH
 ```
 
+## Run a pre-trained model
+
+`pipenv run python demo.py many trained_models/mnist/64296000 result.png`
+
 ## How to train
 
 `pipenv run python train.py settings/default.yaml <directory-to-put-logs>`
@@ -41,6 +45,21 @@ Movie:
 
 ![](images/movie.gif)
 
+## Setup this project by Docker
+
+`cd docker`
+`docker build ./ -t chainer_spiral`
+`cd ../  # go to directory of this repo`
+
+```
+docker run -it -v `pwd`:/root -u`id -u`:`id -g` chainer_spiral bash
+```
+
+or you can run demo with a pre-trained model by:
+
+```
+docker run -it -v `pwd`:/root -u`id -u`:`id -g` chainer_spiral python3 demo.py many trained_models/mnist/64296000 result.png
+```
 
 ## How to install MyPaint for this project
 
