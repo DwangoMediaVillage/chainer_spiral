@@ -12,10 +12,12 @@ A modified implementation of [Synthesizing Programs for Images using Reinforced 
 
 ## Run pre-trained models on Docker
 
-1. `cd docker`
-2. `docker build . -t chainer_spiral`
-3. `docker run -t --name run_chainer_spiral_demo chainer_spiral pipenv run python demo.py many trained_models/mnist/64296000 result.png --without-dataset`
-4. `docker cp run_chainer_spiral_demo:/chainer_spiral/ChainerSPIRAL/result.png .`
+```
+$ cd docker
+$ docker build . -t chainer_spiral
+$ docker run -t --name run_chainer_spiral_demo chainer_spiral pipenv run python demo.py many trained_models/mnist/64296000 result.png --without-dataset
+$ docker cp run_chainer_spiral_demo:/chainer_spiral/ChainerSPIRAL/result.png .
+```
 
 If `docker cp ...` doesn't work because of permission error, you can change the permission by `chmod a+rw .`
 
