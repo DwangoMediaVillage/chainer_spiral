@@ -1,37 +1,25 @@
 # ChainerSPIRAL
 
-Chainer implementation of [Synthesizing Programs for Images using Reinforced Adversarial Learning](https://arxiv.org/abs/1804.01118) (SPIRAL).
+A modified implementation of [Synthesizing Programs for Images using Reinforced Adversarial Learning](https://arxiv.org/abs/1804.01118) (SPIRAL) using [ChainerRL](https://github.com/chainer/chainerrl) and [MyPaint](https://github.com/mypaint/mypaint).
+
+![](images/movie.gif)
 
 ## Dependencies
 
 - [Pipenv](https://pipenv.readthedocs.io/en/latest/)
 - [MyPaint](https://github.com/mypaint/mypaint)
+- [Docker](https://www.docker.com/)
 
-## How to start
+## Run pre-trained models on Docker
 
-1. `pipenv install`
-2. Build [MyPaint](https://github.com/mypaint/mypaint) (See the following)
-3. Append the path of MyPaint's build directory to `.env`:
+1. `cd docker`
+2. `docker build . -t chainer_spiral`
+3. `docker run -t --name run_chainer_spiral_demo chainer_spiral pipenv run python demo.py many trained_models/mnist/64296000 result.png --without-dataset`
+4. `docker cp run_chainer_spiral_demo:/chainer_spiral/ChainerSPIRAL/result.png .`
 
-```
-PYTHONPATH=<path-to-my-paint>build/lib.macosx-10.13-x86_64-3.6:$PYTHONPATH
-```
+If `docker cp ...` doesn't work because of permission error, you can change the permission by `chmod a+rw .`
 
-## Run a pre-trained model
-
-`pipenv run python demo.py many trained_models/mnist/64296000 result.png`
-
-## How to train
-
-`pipenv run python train.py settings/default.yaml <directory-to-put-logs>`
-
-Details of training options available on `settings/default.yaml`.
-
-## How to run a trained model
-
-`pipenv run python demo.py many <path-to-snapshot> many.png`
-
-You can choose a demo mode from `static`, `many`, `movie`, and `json`:
+You can choose a demo mode from `static`, `many`, and `movie` (shown the above):
 
 An example of static demo:
 
@@ -41,28 +29,8 @@ Many demo:
 
 ![](images/many.png)
 
-Movie:
 
-![](images/movie.gif)
-
-## Setup this project by Docker
-
-`cd docker`
-`docker build ./ -t chainer_spiral`
-
-You can run demo with a pre-trained model by:
-
-```
-docker run -it chainer_spiral pipenv run python demo.py many trained_models/mnist/64296000 result.png
-```
-
-After finishing this demo, you can check generated result.png by coping it to the host:
-
-```
-docker cp <container-name>:/chainer_spiral/ChainerSPIRAL/result.png <dst-path>
-```
-
-## How to install MyPaint for this project
+## How to setup manually
 
 ### Install dependencies (CentOS)
 
@@ -81,7 +49,16 @@ $ ./configure --prefix=<your-installation-prefix>
 $ make install
 ```
 
-Make sure that `<your-installation-prefix>/lib` is in `LD_LIBRARY_PATH` and `PYTHONPATH`. Also `PKG_CONFIG_PATH` shoud include `<your-installation-prefix>/lib` and `<your-installation-prefix>/share`.
+### Install mypaint-brushes
+
+```
+$ git clone  https://github.com/mypaint/mypaint-brushes.git
+$ cd mypaint-brushes
+$ git checkout 769ec941054725a195e77d8c55080344e2ab77e4
+$ ./autogen.sh
+$ ./configure --prefix=<your-installation-prefix>
+$ make install
+```
 
 ### Build MyPaint with python support
 
@@ -99,6 +76,20 @@ $ python setup.py build
 $ readlink -f build/lib.linux-x86_64-3.6  # append this path to .env file
 ```
 
+### Set envrionment variables
+
+Make sure that `<your-installation-prefix>/lib` is in `LD_LIBRARY_PATH` and `PYTHONPATH`. Also `PKG_CONFIG_PATH` shoud include `<your-installation-prefix>/lib` and `<your-installation-prefix>/share`.
+
+### Install this project's dependencies
+
+`pipenv run install`
+
 ### Check your installation
 
 Go to this repo's directory and run tests by `pipenv run test`
+
+### Train model from scrach
+
+`pipenv run python train.py settings/default.yaml logs`
+
+Details of training options available on comments of `settings/default.yaml`.
