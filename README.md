@@ -36,46 +36,46 @@ Many demo:
 
 ### Install dependencies (CentOS)
 
-```
-$ sudo yum install gcc gobject-introspection-devel json-c-devel glib2-devel git python autoconf intltool gettext libtool swig python-setuptools gettext gcc-c++ python-devel numpy gtk3-devel pygobject3-devel libpng-devel lcms2-devel json-c-devel gtk3 gobject-introspection
+```bash
+sudo yum install gcc gobject-introspection-devel json-c-devel glib2-devel git python autoconf intltool gettext libtool swig python-setuptools gettext gcc-c++ python-devel numpy gtk3-devel pygobject3-devel libpng-devel lcms2-devel json-c-devel gtk3 gobject-introspection
 ```
 
 ### Install libmypaint
 
-```
-$ git clone https://github.com/mypaint/libmypaint
-$ cd libmypaint
-$ git checkout 0c07191409bd257084d4ea7576deb832aac8868b
-$ ./autogen.sh
-$ ./configure --prefix=<your-installation-prefix>
-$ make install
+```bash
+git clone https://github.com/mypaint/libmypaint
+cd libmypaint
+git checkout 0c07191409bd257084d4ea7576deb832aac8868b
+./autogen.sh
+./configure --prefix=<your-installation-prefix>
+make install
 ```
 
 ### Install mypaint-brushes
 
-```
-$ git clone  https://github.com/mypaint/mypaint-brushes.git
-$ cd mypaint-brushes
-$ git checkout 769ec941054725a195e77d8c55080344e2ab77e4
-$ ./autogen.sh
-$ ./configure --prefix=<your-installation-prefix>
-$ make install
+```bash
+git clone  https://github.com/mypaint/mypaint-brushes.git
+cd mypaint-brushes
+git checkout 769ec941054725a195e77d8c55080344e2ab77e4
+./autogen.sh
+./configure --prefix=<your-installation-prefix>
+make install
 ```
 
 ### Build MyPaint with python support
 
-```
-$ mkdir build_mypaint && cd buid_mypaint
-$ git clone https://github.com/mypaint/mypaint.git
-$ cd mypaint
-$ git checkout 57685af8dbd65719d7874bc501094bade85d94e7
-$ cd ../
-$ pipenv install --python 3.6
-$ pipenv install numpy pygobject pycairo
-$ pipenv shell
-$ cd mypaint
-$ python setup.py build
-$ readlink -f build/lib.linux-x86_64-3.6  # append this path to .env file
+```bash
+mkdir build_mypaint && cd buid_mypaint
+git clone https://github.com/mypaint/mypaint.git
+cd mypaint
+git checkout 57685af8dbd65719d7874bc501094bade85d94e7
+cd ../
+pipenv install --python 3.6
+pipenv install numpy pygobject pycairo
+pipenv shell
+cd mypaint
+python setup.py build
+readlink -f build/lib.linux-x86_64-3.6  # append this path to .env file
 ```
 
 ### Set envrionment variables
@@ -84,8 +84,8 @@ Make sure that `<your-installation-prefix>/lib` is in `LD_LIBRARY_PATH` and `PYT
 
 ### Install this project's dependencies
 
-```
-$ pipenv run install
+```bash
+pipenv run install
 ```
 
 ### Check your installation
@@ -94,8 +94,8 @@ Go to this repo's directory and run tests by `pipenv run test`
 
 ### Train model from scrach
 
-```
+```bash
 pipenv run python train.py settings/default.yaml logs
 ```
 
-Details of training options available on comments of `settings/default.yaml`.
+Details of training options are available on comments of `settings/default.yaml`.
