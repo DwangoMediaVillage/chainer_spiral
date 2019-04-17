@@ -15,8 +15,8 @@ A modified implementation of [Synthesizing Programs for Images using Reinforced 
 ```bash
 cd docker
 docker build . -t chainer_spiral
-docker run -t --name run_chainer_spiral_demo chainer_spiral pipenv run python demo.py many trained_models/mnist/64296000 result.png --without_dataset
-docker cp run_chainer_spiral_demo:/chainer_spiral/ChainerSPIRAL/result.png .
+docker run -t --name run_chainer_spiral_demo chainer_spiral pipenv run python demo.py movie trained_models/mnist/64296000 result.mp4 --without_dataset
+docker cp run_chainer_spiral_demo:/chainer_spiral/ChainerSPIRAL/result.mp4 .
 ```
 
 If `docker cp ...` doesn't work because of a permission error, change permission of the current directory by `chmod a+rw .`

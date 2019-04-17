@@ -6,7 +6,7 @@ RUN apt-get update
 
 # add repo of git-lfs 
 RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash  # required to install git-lfs
-RUN apt-get install -y git swig python-setuptools gettext g++ python-dev python-numpy libgtk-3-dev python-gi-dev libpng-dev liblcms2-dev libjson-c-dev gir1.2-gtk-3.0 python-gi-cairo intltool libtool git-lfs
+RUN apt-get install -y git swig python-setuptools gettext g++ python-dev python-numpy libgtk-3-dev python-gi-dev libpng-dev liblcms2-dev libjson-c-dev gir1.2-gtk-3.0 python-gi-cairo intltool libtool git-lfs ffmpeg
 
 # create working directory
 RUN mkdir chainer_spiral
