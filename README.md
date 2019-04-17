@@ -19,7 +19,7 @@ $ docker run -t --name run_chainer_spiral_demo chainer_spiral pipenv run python 
 $ docker cp run_chainer_spiral_demo:/chainer_spiral/ChainerSPIRAL/result.png .
 ```
 
-If `docker cp ...` doesn't work because of permission error, you can change the permission by `chmod a+rw .`
+If `docker cp ...` doesn't work because of a permission error, change permission of the current directory by `chmod a+rw .`
 
 You can choose a demo mode from `static`, `many`, and `movie` (shown the above):
 
@@ -45,7 +45,7 @@ $ sudo yum install gcc gobject-introspection-devel json-c-devel glib2-devel git 
 ```
 $ git clone https://github.com/mypaint/libmypaint
 $ cd libmypaint
-# git checkout 0c07191409bd257084d4ea7576deb832aac8868b
+$ git checkout 0c07191409bd257084d4ea7576deb832aac8868b
 $ ./autogen.sh
 $ ./configure --prefix=<your-installation-prefix>
 $ make install
@@ -84,7 +84,9 @@ Make sure that `<your-installation-prefix>/lib` is in `LD_LIBRARY_PATH` and `PYT
 
 ### Install this project's dependencies
 
-`pipenv run install`
+```
+$ pipenv run install
+```
 
 ### Check your installation
 
@@ -92,6 +94,8 @@ Go to this repo's directory and run tests by `pipenv run test`
 
 ### Train model from scrach
 
-`pipenv run python train.py settings/default.yaml logs`
+```
+pipenv run python train.py settings/default.yaml logs
+```
 
 Details of training options available on comments of `settings/default.yaml`.
