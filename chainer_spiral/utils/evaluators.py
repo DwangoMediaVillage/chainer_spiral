@@ -233,6 +233,7 @@ def demo_movie(env, agent, config, savename, suptitle, dataset, n_row=5, plot_ac
             # obs
             ax_movie = plt.subplot(gs[n, 0])
             im = ax_movie.imshow(obs[n][0]['image'])  # image at t=0
+            set_axis_prop(ax_movie)
             ims.append(im)
             if n == 0: ax_movie.set_title('Movie')
 
