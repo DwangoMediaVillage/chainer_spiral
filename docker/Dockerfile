@@ -3,7 +3,10 @@ MAINTAINER KazumaSasaki <kazuma_sasaki@dwango.co.jp>
 
 # install dependencies
 RUN apt-get update
-RUN apt-get install -y git swig python-setuptools gettext g++ python-dev python-numpy libgtk-3-dev python-gi-dev libpng-dev liblcms2-dev libjson-c-dev gir1.2-gtk-3.0 python-gi-cairo intltool libtool
+
+# add repo of git-lfs 
+RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash  # required to install git-lfs
+RUN apt-get install -y git swig python-setuptools gettext g++ python-dev python-numpy libgtk-3-dev python-gi-dev libpng-dev liblcms2-dev libjson-c-dev gir1.2-gtk-3.0 python-gi-cairo intltool libtool git-lfs
 
 # create working directory
 RUN mkdir chainer_spiral
@@ -62,8 +65,3 @@ ENV LD_LIBRARY_PATH /usr/local/lib:/chainer_spiral/build_mypaint/mypaint/build/l
 ENV CHAINER_DATASET_ROOT /root  # default place to download mnist dataset
 
 RUN pipenv install
-
-# download pre-trained model with git lfs
-RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash  # required to install git-lfs
-RUN apt-get install -y git-lfs
-RUN git lfs pull
