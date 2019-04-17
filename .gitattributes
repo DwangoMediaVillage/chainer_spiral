@@ -7,3 +7,7 @@ trained_models/mnist/64296000/dis_optimizer.npz filter=lfs diff=lfs merge=lfs -t
 trained_models/mnist/64296000/discriminator.npz filter=lfs diff=lfs merge=lfs -text
 trained_models/mnist/64296000/gen_optimizer.npz filter=lfs diff=lfs merge=lfs -text
 trained_models/mnist/64296000/generator.npz filter=lfs diff=lfs merge=lfs -text
+trained_models/emnist filter=lfs diff=lfs merge=lfs -text
+trained_models/jikei filter=lfs diff=lfs merge=lfs -text
+trained_models/quickdraw filter=lfs diff=lfs merge=lfs -text
+trained_models/** filter=lfs diff=lfs merge=lfs -text
