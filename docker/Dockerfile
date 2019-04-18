@@ -13,7 +13,7 @@ RUN mkdir chainer_spiral
 WORKDIR chainer_spiral
 
 # clone chainer spiral repo
-RUN git clone https://github.o-in.dwango.co.jp/DMV-research/ChainerSPIRAL
+RUN git clone https://github.com/DwangoMediaVillage/chainer_spiral.git
 
 # install libmypaint
 RUN git clone https://github.com/mypaint/libmypaint
